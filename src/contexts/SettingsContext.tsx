@@ -10,6 +10,24 @@ export interface AppSettings {
   feature_receipts: boolean
   feature_recurring: boolean
   feature_advanced_filters: boolean
+  feature_budget_alerts: boolean
+  feature_savings_goals: boolean
+  feature_reports: boolean
+  feature_spending_trends: boolean
+  feature_notifications: boolean
+  feature_unusual_spending: boolean
+  feature_tax_reports: boolean
+  feature_date_range_filter: boolean
+  feature_amount_range_filter: boolean
+  feature_saved_filters: boolean
+  feature_import_csv: boolean
+  feature_auto_categorize: boolean
+  feature_export_excel: boolean
+  feature_auto_backup: boolean
+  feature_bill_reminders: boolean
+  feature_custom_categories: boolean
+  feature_multi_currency: boolean
+  feature_exchange_rates: boolean
 }
 
 interface SettingsContextType {
@@ -26,6 +44,24 @@ const defaultSettings: AppSettings = {
   feature_receipts: false,
   feature_recurring: true,
   feature_advanced_filters: true,
+  feature_budget_alerts: true,
+  feature_savings_goals: true,
+  feature_reports: true,
+  feature_spending_trends: true,
+  feature_notifications: false,
+  feature_unusual_spending: true,
+  feature_tax_reports: false,
+  feature_date_range_filter: true,
+  feature_amount_range_filter: true,
+  feature_saved_filters: true,
+  feature_import_csv: false,
+  feature_auto_categorize: false,
+  feature_export_excel: true,
+  feature_auto_backup: false,
+  feature_bill_reminders: true,
+  feature_custom_categories: false,
+  feature_multi_currency: false,
+  feature_exchange_rates: false,
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)

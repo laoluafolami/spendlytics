@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, DollarSign, Check, Target, TrendingUp, CreditCard, Tag, Receipt, Repeat, Filter } from 'lucide-react'
+import { Settings as SettingsIcon, DollarSign, Check, Target, TrendingUp, CreditCard, Tag, Receipt, Repeat, Filter, Bell, BarChart2, FileText, Upload, Download, Sparkles, Coins } from 'lucide-react'
 import { useCurrency, CURRENCIES } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
 
@@ -145,7 +145,7 @@ export default function Settings() {
                 <Target className="text-blue-600 dark:text-blue-400" size={20} />
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Budget & Goals</h3>
               </div>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">Enable budget tracking and savings goals</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Track budgets and achieve savings goals</p>
 
               <div className="space-y-3">
                 <FeatureItem
@@ -154,6 +154,20 @@ export default function Settings() {
                   description="Set monthly budget limits per category"
                   enabled={settings.feature_budgets}
                   onChange={() => handleToggle('feature_budgets')}
+                />
+                <FeatureItem
+                  icon={BarChart2}
+                  title="Budget Progress Tracking"
+                  description="Track budget vs actual spending with progress bars"
+                  enabled={settings.feature_budget_alerts}
+                  onChange={() => handleToggle('feature_budget_alerts')}
+                />
+                <FeatureItem
+                  icon={Target}
+                  title="Savings Goals"
+                  description="Set and track savings goals with deadlines"
+                  enabled={settings.feature_savings_goals}
+                  onChange={() => handleToggle('feature_savings_goals')}
                 />
               </div>
             </div>
@@ -218,6 +232,151 @@ export default function Settings() {
                   description="Search and filter expenses by multiple criteria"
                   enabled={settings.feature_advanced_filters}
                   onChange={() => handleToggle('feature_advanced_filters')}
+                />
+                <FeatureItem
+                  icon={Filter}
+                  title="Date Range Filters"
+                  description="Filter expenses by custom date ranges"
+                  enabled={settings.feature_date_range_filter}
+                  onChange={() => handleToggle('feature_date_range_filter')}
+                />
+                <FeatureItem
+                  icon={Filter}
+                  title="Amount Range Filters"
+                  description="Filter expenses by amount ranges"
+                  enabled={settings.feature_amount_range_filter}
+                  onChange={() => handleToggle('feature_amount_range_filter')}
+                />
+                <FeatureItem
+                  icon={Filter}
+                  title="Saved Filter Presets"
+                  description="Save and reuse custom filter combinations"
+                  enabled={settings.feature_saved_filters}
+                  onChange={() => handleToggle('feature_saved_filters')}
+                />
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart2 className="text-blue-600 dark:text-blue-400" size={20} />
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Reports & Insights</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Advanced analytics and spending insights</p>
+
+              <div className="space-y-3">
+                <FeatureItem
+                  icon={FileText}
+                  title="Detailed Reports"
+                  description="Generate comprehensive expense reports"
+                  enabled={settings.feature_reports}
+                  onChange={() => handleToggle('feature_reports')}
+                />
+                <FeatureItem
+                  icon={TrendingUp}
+                  title="Spending Trends"
+                  description="Compare spending across time periods with predictions"
+                  enabled={settings.feature_spending_trends}
+                  onChange={() => handleToggle('feature_spending_trends')}
+                />
+                <FeatureItem
+                  icon={Bell}
+                  title="Expense Summaries"
+                  description="Weekly/monthly expense summaries via notifications"
+                  enabled={settings.feature_notifications}
+                  onChange={() => handleToggle('feature_notifications')}
+                />
+                <FeatureItem
+                  icon={Sparkles}
+                  title="Unusual Spending Detection"
+                  description="Identify unusual spending patterns automatically"
+                  enabled={settings.feature_unusual_spending}
+                  onChange={() => handleToggle('feature_unusual_spending')}
+                />
+                <FeatureItem
+                  icon={FileText}
+                  title="Tax Reports"
+                  description="Tax-ready reports for business expenses"
+                  enabled={settings.feature_tax_reports}
+                  onChange={() => handleToggle('feature_tax_reports')}
+                />
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 mb-4">
+                <Upload className="text-blue-600 dark:text-blue-400" size={20} />
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Import & Export</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Import and export expense data</p>
+
+              <div className="space-y-3">
+                <FeatureItem
+                  icon={Upload}
+                  title="CSV Import"
+                  description="Import expenses from CSV files or bank statements"
+                  enabled={settings.feature_import_csv}
+                  onChange={() => handleToggle('feature_import_csv')}
+                />
+                <FeatureItem
+                  icon={Sparkles}
+                  title="Auto-Categorization"
+                  description="Automatically categorize imported transactions"
+                  enabled={settings.feature_auto_categorize}
+                  onChange={() => handleToggle('feature_auto_categorize')}
+                />
+                <FeatureItem
+                  icon={Download}
+                  title="Excel/CSV Export"
+                  description="Export expenses to Excel or CSV format"
+                  enabled={settings.feature_export_excel}
+                  onChange={() => handleToggle('feature_export_excel')}
+                />
+                <FeatureItem
+                  icon={Download}
+                  title="Auto Backup"
+                  description="Scheduled automatic backup of expense data"
+                  enabled={settings.feature_auto_backup}
+                  onChange={() => handleToggle('feature_auto_backup')}
+                />
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="text-blue-600 dark:text-blue-400" size={20} />
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Smart Features</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Intelligent automation and advanced capabilities</p>
+
+              <div className="space-y-3">
+                <FeatureItem
+                  icon={Bell}
+                  title="Bill Reminders"
+                  description="Get reminders for recurring bills and expenses"
+                  enabled={settings.feature_bill_reminders}
+                  onChange={() => handleToggle('feature_bill_reminders')}
+                />
+                <FeatureItem
+                  icon={Tag}
+                  title="Custom Categories"
+                  description="Create custom expense categories beyond presets"
+                  enabled={settings.feature_custom_categories}
+                  onChange={() => handleToggle('feature_custom_categories')}
+                />
+                <FeatureItem
+                  icon={Coins}
+                  title="Multi-Currency Support"
+                  description="Track expenses in multiple currencies (for travelers)"
+                  enabled={settings.feature_multi_currency}
+                  onChange={() => handleToggle('feature_multi_currency')}
+                />
+                <FeatureItem
+                  icon={TrendingUp}
+                  title="Exchange Rate Conversion"
+                  description="Automatic exchange rate conversion with historical rates"
+                  enabled={settings.feature_exchange_rates}
+                  onChange={() => handleToggle('feature_exchange_rates')}
                 />
               </div>
             </div>
