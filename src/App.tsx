@@ -16,6 +16,7 @@ import SavingsGoals from './components/SavingsGoals'
 import Reports from './components/Reports'
 import ImportExport from './components/ImportExport'
 import { exportExpensesToPDF } from './utils/exportPDF'
+import { Tooltip } from './components/Tooltip'
 
 type View = 'intro' | 'dashboard' | 'list' | 'add' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import'
 
@@ -235,7 +236,7 @@ function App() {
               {menuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = view === item.view
-                return (
+                const button = (
                   <button
                     key={item.view}
                     onClick={() => {
@@ -251,7 +252,6 @@ function App() {
                         ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
                         : `bg-gradient-to-br ${item.bgGradient} hover:bg-white/50 dark:hover:bg-gray-800/50 hover:scale-105 border border-transparent hover:border-white/40 dark:hover:border-gray-700/50`
                     }`}
-                    title={!sidebarOpen ? item.label : undefined}
                   >
                     <div className={`transform transition-all duration-300 group-hover:rotate-12 group-hover:scale-110 ${
                       isActive ? 'text-white' : item.color
@@ -266,6 +266,12 @@ function App() {
                       </span>
                     )}
                   </button>
+                )
+
+                return (
+                  <Tooltip key={item.view} content={item.label} show={!sidebarOpen}>
+                    {button}
+                  </Tooltip>
                 )
               })}
             </nav>
