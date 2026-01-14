@@ -106,23 +106,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           .update(updatePayload)
           .eq('id', settings.id)
           .select()
-          .single()
+          .maybeSingle()
 
-        if (error) throw error
+        if (error) {
+          console.error('Update error details:', error)
+          throw new Error(`Database update failed: ${error.message}`)
+        }
 
         if (data) {
           setSettings(data)
         }
       } else {
         const insertPayload = { ...updatedSettings, session_id: sessionId }
+        delete (insertPayload as any).id
 
         const { data, error } = await supabase
           .from('app_settings')
           .insert([insertPayload])
           .select()
-          .single()
+          .maybeSingle()
 
-        if (error) throw error
+        if (error) {
+          console.error('Insert error details:', error)
+          throw new Error(`Database insert failed: ${error.message}`)
+        }
 
         if (data) {
           setSettings(data)

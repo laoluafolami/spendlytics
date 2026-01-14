@@ -10,7 +10,8 @@ export default function Settings() {
     try {
       await updateSettings({ [key]: !settings[key] })
     } catch (error) {
-      alert('Failed to update settings')
+      console.error('Settings update error:', error)
+      alert(`Failed to update settings: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
