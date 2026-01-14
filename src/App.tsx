@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon } from 'lucide-react'
+import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet } from 'lucide-react'
 import { supabase, sessionId } from './lib/supabase'
 import { Expense, ExpenseFormData } from './types/expense'
 import { useTheme } from './contexts/ThemeContext'
+import { useSettings } from './contexts/SettingsContext'
 import IntroPage from './components/IntroPage'
 import ExpenseForm from './components/ExpenseForm'
 import ExpenseList from './components/ExpenseList'
 import Dashboard from './components/Dashboard'
 import Analytics from './components/Analytics'
 import Settings from './components/Settings'
+import IncomeManager from './components/IncomeManager'
+import BudgetManager from './components/BudgetManager'
+import SavingsGoals from './components/SavingsGoals'
 import { exportExpensesToPDF } from './utils/exportPDF'
 
-type View = 'intro' | 'dashboard' | 'list' | 'add' | 'analytics' | 'settings'
+type View = 'intro' | 'dashboard' | 'list' | 'add' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings'
 
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -19,6 +23,7 @@ function App() {
   const [view, setView] = useState<View>('intro')
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const { theme, toggleTheme } = useTheme()
+  const { settings } = useSettings()
 
   useEffect(() => {
     loadExpenses()
@@ -234,6 +239,45 @@ function App() {
               <TrendingUp size={18} />
               Analytics
             </button>
+            {settings.feature_income && (
+              <button
+                onClick={() => setView('income')}
+                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
+                  view === 'income'
+                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                <DollarSign size={18} />
+                Income
+              </button>
+            )}
+            {settings.feature_budgets && (
+              <button
+                onClick={() => setView('budgets')}
+                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
+                  view === 'budgets'
+                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                <Wallet size={18} />
+                Budgets
+              </button>
+            )}
+            {settings.feature_savings_goals && (
+              <button
+                onClick={() => setView('savings')}
+                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
+                  view === 'savings'
+                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                <Target size={18} />
+                Savings
+              </button>
+            )}
             <button
               onClick={() => setView('settings')}
               className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
@@ -282,6 +326,12 @@ function App() {
         )}
 
         {view === 'analytics' && <Analytics expenses={expenses} />}
+
+        {view === 'income' && <IncomeManager />}
+
+        {view === 'budgets' && <BudgetManager expenses={expenses} />}
+
+        {view === 'savings' && <SavingsGoals />}
 
         {view === 'settings' && <Settings />}
       </main>

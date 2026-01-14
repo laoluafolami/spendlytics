@@ -19,6 +19,10 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('')
   const [showRecurringOnly, setShowRecurringOnly] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [amountFrom, setAmountFrom] = useState('')
+  const [amountTo, setAmountTo] = useState('')
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter(expense => {
@@ -33,18 +37,31 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
 
       const matchesRecurring = !showRecurringOnly || expense.is_recurring === true
 
-      return matchesSearch && matchesCategory && matchesPaymentMethod && matchesRecurring
+      const matchesDateFrom = dateFrom === '' || new Date(expense.date) >= new Date(dateFrom)
+      const matchesDateTo = dateTo === '' || new Date(expense.date) <= new Date(dateTo)
+
+      const expenseAmount = parseFloat(expense.amount.toString())
+      const matchesAmountFrom = amountFrom === '' || expenseAmount >= parseFloat(amountFrom)
+      const matchesAmountTo = amountTo === '' || expenseAmount <= parseFloat(amountTo)
+
+      return matchesSearch && matchesCategory && matchesPaymentMethod && matchesRecurring &&
+             matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo
     })
-  }, [expenses, searchTerm, selectedCategory, selectedPaymentMethod, showRecurringOnly])
+  }, [expenses, searchTerm, selectedCategory, selectedPaymentMethod, showRecurringOnly, dateFrom, dateTo, amountFrom, amountTo])
 
   const clearFilters = () => {
     setSearchTerm('')
     setSelectedCategory('')
     setSelectedPaymentMethod('')
     setShowRecurringOnly(false)
+    setDateFrom('')
+    setDateTo('')
+    setAmountFrom('')
+    setAmountTo('')
   }
 
-  const hasActiveFilters = searchTerm || selectedCategory || selectedPaymentMethod || showRecurringOnly
+  const hasActiveFilters = searchTerm || selectedCategory || selectedPaymentMethod || showRecurringOnly ||
+                           dateFrom || dateTo || amountFrom || amountTo
 
   if (expenses.length === 0) {
     return (
@@ -138,6 +155,46 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                     />
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Recurring Only</span>
                   </label>
+                )}
+
+                {settings.feature_date_range_filter && (
+                  <>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      placeholder="Date from"
+                      className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      placeholder="Date to"
+                      className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
+                    />
+                  </>
+                )}
+
+                {settings.feature_amount_range_filter && (
+                  <>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={amountFrom}
+                      onChange={(e) => setAmountFrom(e.target.value)}
+                      placeholder="Amount from"
+                      className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={amountTo}
+                      onChange={(e) => setAmountTo(e.target.value)}
+                      placeholder="Amount to"
+                      className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
+                    />
+                  </>
                 )}
               </div>
             )}
