@@ -38,6 +38,7 @@ function App() {
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
+        .eq('user_id', sessionId)
         .order('date', { ascending: false })
 
       if (error) throw error
@@ -54,6 +55,7 @@ function App() {
       const { error } = await supabase
         .from('expenses')
         .insert([{
+          user_id: sessionId,
           amount: parseFloat(formData.amount),
           category: formData.category,
           description: formData.description,
@@ -83,6 +85,7 @@ function App() {
       const { error } = await supabase
         .from('expenses')
         .update({
+          user_id: sessionId,
           amount: parseFloat(formData.amount),
           category: formData.category,
           description: formData.description,
