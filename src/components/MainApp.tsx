@@ -160,8 +160,12 @@ export default function MainApp() {
   }
 
   const handleSignOut = async () => {
-    await signOut()
-    navigate('/')
+    try {
+      await signOut()
+      navigate('/', { replace: true })
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
   if (loading) {
