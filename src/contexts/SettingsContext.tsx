@@ -79,6 +79,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('app_settings')
         .select('*')
+        .eq('session_id', sessionId)
         .maybeSingle()
 
       if (error) throw error
