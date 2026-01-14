@@ -80,12 +80,12 @@ export default function Dashboard({ expenses }: DashboardProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Total Expenses</p>
-                <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
                   {formatAmount(stats.total)}
                 </p>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
-                <DollarSign className="text-white" size={28} />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
+                <DollarSign className="text-white" size={20} />
               </div>
             </div>
           </div>
@@ -97,12 +97,12 @@ export default function Dashboard({ expenses }: DashboardProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">This Month</p>
-                <p className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
                   {formatAmount(stats.monthlyTotal)}
                 </p>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
-                <Calendar className="text-white" size={28} />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
+                <Calendar className="text-white" size={20} />
               </div>
             </div>
           </div>
@@ -114,12 +114,12 @@ export default function Dashboard({ expenses }: DashboardProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Total Transactions</p>
-                <p className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 dark:from-orange-400 dark:to-pink-400 bg-clip-text text-transparent">
+                <p className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 dark:from-orange-400 dark:to-pink-400 bg-clip-text text-transparent">
                   {stats.count}
                 </p>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-pink-600 dark:from-orange-600 dark:to-pink-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
-                <TrendingUp className="text-white" size={28} />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-pink-600 dark:from-orange-600 dark:to-pink-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
+                <TrendingUp className="text-white" size={20} />
               </div>
             </div>
           </div>
