@@ -3,6 +3,8 @@ import { Upload, Download, FileText, AlertCircle, CheckCircle } from 'lucide-rea
 import { Expense, EXPENSE_CATEGORIES } from '../types/expense'
 import { supabase, sessionId } from '../lib/supabase'
 import { format } from 'date-fns'
+import { exportExpensesToPDF } from '../utils/exportPDF'
+import { useCurrency } from '../contexts/CurrencyContext'
 
 interface ImportExportProps {
   expenses: Expense[]
@@ -10,6 +12,7 @@ interface ImportExportProps {
 }
 
 export default function ImportExport({ expenses, onImportComplete }: ImportExportProps) {
+  const { currency } = useCurrency()
   const [importing, setImporting] = useState(false)
   const [importStatus, setImportStatus] = useState<{
     success: boolean
@@ -298,6 +301,19 @@ export default function ImportExport({ expenses, onImportComplete }: ImportExpor
               >
                 <FileText size={20} />
                 Export as Excel
+              </button>
+
+              <button
+                onClick={() => exportExpensesToPDF(expenses, currency.symbol)}
+                disabled={expenses.length === 0}
+                className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+                  expenses.length === 0
+                    ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white transform hover:scale-105 shadow-lg'
+                }`}
+              >
+                <FileText size={20} />
+                Export as PDF
               </button>
             </div>
           </div>

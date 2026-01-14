@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable'
 import { Expense } from '../types/expense'
 import { format } from 'date-fns'
 
-export function exportExpensesToPDF(expenses: Expense[]) {
+export function exportExpensesToPDF(expenses: Expense[], currencySymbol: string = '$') {
   const doc = new jsPDF()
 
   doc.setFontSize(20)
@@ -13,13 +13,13 @@ export function exportExpensesToPDF(expenses: Expense[]) {
   doc.text(`Generated on ${format(new Date(), 'MMMM dd, yyyy')}`, 14, 28)
 
   const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount.toString()), 0)
-  doc.text(`Total Expenses: $${total.toFixed(2)}`, 14, 34)
+  doc.text(`Total Expenses: ${currencySymbol}${total.toFixed(2)}`, 14, 34)
 
   const tableData = expenses.map(exp => [
     format(new Date(exp.date), 'MMM dd, yyyy'),
     exp.category,
     exp.description || '-',
-    `$${parseFloat(exp.amount.toString()).toFixed(2)}`
+    `${currencySymbol}${parseFloat(exp.amount.toString()).toFixed(2)}`
   ])
 
   autoTable(doc, {
