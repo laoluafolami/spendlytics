@@ -6,7 +6,6 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useSettings } from '../contexts/SettingsContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import IntroPage from './IntroPage'
 import ExpenseForm from './ExpenseForm'
 import ExpenseList from './ExpenseList'
 import Dashboard from './Dashboard'
@@ -19,12 +18,12 @@ import Reports from './Reports'
 import ImportExport from './ImportExport'
 import { Tooltip } from './Tooltip'
 
-type View = 'intro' | 'dashboard' | 'list' | 'add' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import'
+type View = 'dashboard' | 'list' | 'add' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import'
 
 export default function MainApp() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<View>('intro')
+  const [view, setView] = useState<View>('dashboard')
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const { theme, toggleTheme } = useTheme()
@@ -147,17 +146,9 @@ export default function MainApp() {
     setView('list')
   }
 
-  const handleGetStarted = () => {
-    setView('dashboard')
-  }
-
   const handleSignOut = async () => {
     await signOut()
     navigate('/')
-  }
-
-  if (view === 'intro') {
-    return <IntroPage onGetStarted={handleGetStarted} />
   }
 
   if (loading) {
