@@ -48,7 +48,13 @@ function App() {
           amount: parseFloat(formData.amount),
           category: formData.category,
           description: formData.description,
-          date: formData.date
+          date: formData.date,
+          payment_method: formData.payment_method,
+          tags: formData.tags || [],
+          receipt_url: formData.receipt_url,
+          is_recurring: formData.is_recurring || false,
+          recurrence_frequency: formData.recurrence_frequency,
+          recurrence_end_date: formData.recurrence_end_date || null
         }])
 
       if (error) throw error
@@ -71,6 +77,12 @@ function App() {
           category: formData.category,
           description: formData.description,
           date: formData.date,
+          payment_method: formData.payment_method,
+          tags: formData.tags || [],
+          receipt_url: formData.receipt_url,
+          is_recurring: formData.is_recurring || false,
+          recurrence_frequency: formData.recurrence_frequency,
+          recurrence_end_date: formData.recurrence_end_date || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', editingExpense.id)
@@ -255,7 +267,13 @@ function App() {
                 amount: editingExpense.amount.toString(),
                 category: editingExpense.category,
                 description: editingExpense.description,
-                date: editingExpense.date
+                date: editingExpense.date,
+                payment_method: editingExpense.payment_method,
+                tags: editingExpense.tags,
+                receipt_url: editingExpense.receipt_url,
+                is_recurring: editingExpense.is_recurring,
+                recurrence_frequency: editingExpense.recurrence_frequency,
+                recurrence_end_date: editingExpense.recurrence_end_date
               } : undefined}
             />
           </div>

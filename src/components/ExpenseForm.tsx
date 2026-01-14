@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { EXPENSE_CATEGORIES, ExpenseFormData } from '../types/expense'
-import { Save, X } from 'lucide-react'
+import { EXPENSE_CATEGORIES, PAYMENT_METHODS, RECURRENCE_FREQUENCIES, COMMON_TAGS, ExpenseFormData } from '../types/expense'
+import { Save, X, Plus } from 'lucide-react'
 import { useCurrency } from '../contexts/CurrencyContext'
+import { useSettings } from '../contexts/SettingsContext'
 
 interface ExpenseFormProps {
   onSubmit: (data: ExpenseFormData) => Promise<void>
@@ -11,15 +12,23 @@ interface ExpenseFormProps {
 
 export default function ExpenseForm({ onSubmit, onCancel, initialData }: ExpenseFormProps) {
   const { currency } = useCurrency()
+  const { settings } = useSettings()
   const [formData, setFormData] = useState<ExpenseFormData>(
     initialData || {
       amount: '',
       category: '',
       description: '',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      payment_method: 'Cash',
+      tags: [],
+      receipt_url: '',
+      is_recurring: false,
+      recurrence_frequency: '',
+      recurrence_end_date: ''
     }
   )
   const [loading, setLoading] = useState(false)
+  const [customTag, setCustomTag] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,10 +39,35 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
         amount: '',
         category: '',
         description: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        payment_method: 'Cash',
+        tags: [],
+        receipt_url: '',
+        is_recurring: false,
+        recurrence_frequency: '',
+        recurrence_end_date: ''
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToggleTag = (tag: string) => {
+    const tags = formData.tags || []
+    if (tags.includes(tag)) {
+      setFormData({ ...formData, tags: tags.filter(t => t !== tag) })
+    } else {
+      setFormData({ ...formData, tags: [...tags, tag] })
+    }
+  }
+
+  const handleAddCustomTag = () => {
+    if (customTag.trim()) {
+      const tags = formData.tags || []
+      if (!tags.includes(customTag.trim())) {
+        setFormData({ ...formData, tags: [...tags, customTag.trim()] })
+      }
+      setCustomTag('')
     }
   }
 
@@ -113,6 +147,157 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
               placeholder="Add notes about this expense"
             />
           </div>
+
+          {settings.feature_payment_methods && (
+            <div className="transform transition-all duration-200 hover:scale-[1.02]">
+              <label htmlFor="payment_method" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Payment Method
+              </label>
+              <select
+                id="payment_method"
+                value={formData.payment_method}
+                onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+              >
+                {PAYMENT_METHODS.map((method) => (
+                  <option key={method} value={method}>
+                    {method}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {settings.feature_tags && (
+            <div className="transform transition-all duration-200 hover:scale-[1.02]">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Tags (Optional)
+              </label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {COMMON_TAGS.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleToggleTag(tag)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      formData.tags?.includes(tag)
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                        : 'bg-white/50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customTag}
+                  onChange={(e) => setCustomTag(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomTag())}
+                  placeholder="Add custom tag"
+                  className="flex-1 px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomTag}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all flex items-center gap-1"
+                >
+                  <Plus size={16} />
+                  Add
+                </button>
+              </div>
+              {formData.tags && formData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {formData.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm flex items-center gap-2"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTag(tag)}
+                        className="hover:text-red-200"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {settings.feature_receipts && (
+            <div className="transform transition-all duration-200 hover:scale-[1.02]">
+              <label htmlFor="receipt_url" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Receipt URL (Optional)
+              </label>
+              <input
+                type="url"
+                id="receipt_url"
+                value={formData.receipt_url}
+                onChange={(e) => setFormData({ ...formData, receipt_url: e.target.value })}
+                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="https://example.com/receipt.jpg"
+              />
+            </div>
+          )}
+
+          {settings.feature_recurring && (
+            <>
+              <div className="transform transition-all duration-200 hover:scale-[1.02]">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_recurring}
+                    onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+                    className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    This is a recurring expense
+                  </span>
+                </label>
+              </div>
+
+              {formData.is_recurring && (
+                <>
+                  <div className="transform transition-all duration-200 hover:scale-[1.02]">
+                    <label htmlFor="recurrence_frequency" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      Frequency
+                    </label>
+                    <select
+                      id="recurrence_frequency"
+                      value={formData.recurrence_frequency}
+                      onChange={(e) => setFormData({ ...formData, recurrence_frequency: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                    >
+                      <option value="">Select frequency</option>
+                      {RECURRENCE_FREQUENCIES.map((freq) => (
+                        <option key={freq} value={freq}>
+                          {freq}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="transform transition-all duration-200 hover:scale-[1.02]">
+                    <label htmlFor="recurrence_end_date" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      End Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      id="recurrence_end_date"
+                      value={formData.recurrence_end_date}
+                      onChange={(e) => setFormData({ ...formData, recurrence_end_date: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </>
+              )}
+            </>
+          )}
 
           <div className="flex gap-4 pt-4">
             <button

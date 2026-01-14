@@ -1,7 +1,9 @@
-import { Trash2, Edit2, Inbox } from 'lucide-react'
-import { Expense } from '../types/expense'
+import { useState, useMemo } from 'react'
+import { Trash2, Edit2, Inbox, Search, Filter, X, CreditCard, Repeat, Receipt } from 'lucide-react'
+import { Expense, EXPENSE_CATEGORIES } from '../types/expense'
 import { format } from 'date-fns'
 import { useCurrency } from '../contexts/CurrencyContext'
+import { useSettings } from '../contexts/SettingsContext'
 
 interface ExpenseListProps {
   expenses: Expense[]
@@ -11,6 +13,39 @@ interface ExpenseListProps {
 
 export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListProps) {
   const { formatAmount } = useCurrency()
+  const { settings } = useSettings()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('')
+  const [showRecurringOnly, setShowRecurringOnly] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(expense => {
+      const matchesSearch = searchTerm === '' ||
+        expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        expense.category.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const matchesCategory = selectedCategory === '' || expense.category === selectedCategory
+
+      const matchesPaymentMethod = selectedPaymentMethod === '' ||
+        expense.payment_method === selectedPaymentMethod
+
+      const matchesRecurring = !showRecurringOnly || expense.is_recurring === true
+
+      return matchesSearch && matchesCategory && matchesPaymentMethod && matchesRecurring
+    })
+  }, [expenses, searchTerm, selectedCategory, selectedPaymentMethod, showRecurringOnly])
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setSelectedCategory('')
+    setSelectedPaymentMethod('')
+    setShowRecurringOnly(false)
+  }
+
+  const hasActiveFilters = searchTerm || selectedCategory || selectedPaymentMethod || showRecurringOnly
+
   if (expenses.length === 0) {
     return (
       <div className="relative animate-fade-in">
@@ -27,47 +62,175 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
   }
 
   return (
-    <div className="relative animate-fade-in">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl blur-2xl opacity-10"></div>
-      <div className="relative rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-pink-600/20 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                  Description
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
-              {expenses.map((expense) => (
+    <div className="space-y-4 animate-fade-in">
+      {settings.feature_advanced_filters && (
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl blur-xl opacity-10"></div>
+          <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Search expenses..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                />
+              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all ${
+                  showFilters
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                    : 'bg-white/50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
+                }`}
+              >
+                <Filter size={18} />
+                Filters
+              </button>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl font-medium flex items-center gap-2 transition-all"
+                >
+                  <X size={18} />
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {showFilters && (
+              <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                >
+                  <option value="">All Categories</option>
+                  {EXPENSE_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+
+                {settings.feature_payment_methods && (
+                  <select
+                    value={selectedPaymentMethod}
+                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                    className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                  >
+                    <option value="">All Payment Methods</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Digital Wallet">Digital Wallet</option>
+                  </select>
+                )}
+
+                {settings.feature_recurring && (
+                  <label className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showRecurringOnly}
+                      onChange={(e) => setShowRecurringOnly(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Recurring Only</span>
+                  </label>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl blur-2xl opacity-10"></div>
+        <div className="relative rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-pink-600/20 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    Description
+                  </th>
+                  {settings.feature_payment_methods && (
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      Payment
+                    </th>
+                  )}
+                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
+                {filteredExpenses.map((expense) => (
                 <tr
                   key={expense.id}
                   className="group hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all duration-200"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {format(new Date(expense.date), 'MMM dd, yyyy')}
+                    <div className="flex items-center gap-2">
+                      {format(new Date(expense.date), 'MMM dd, yyyy')}
+                      {settings.feature_recurring && expense.is_recurring && (
+                        <span title="Recurring expense">
+                          <Repeat size={14} className="text-blue-500" />
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500/20 to-purple-500/20 dark:from-blue-600/30 dark:to-purple-600/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50 backdrop-blur-sm">
                       {expense.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 max-w-xs truncate">
-                    {expense.description || '-'}
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                    <div className="max-w-xs">
+                      <div className="truncate">{expense.description || '-'}</div>
+                      {settings.feature_tags && expense.tags && expense.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {expense.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {settings.feature_receipts && expense.receipt_url && (
+                        <a
+                          href={expense.receipt_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          <Receipt size={12} />
+                          View Receipt
+                        </a>
+                      )}
+                    </div>
                   </td>
+                  {settings.feature_payment_methods && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                        <CreditCard size={12} />
+                        {expense.payment_method || 'Cash'}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
                     <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
                       {formatAmount(parseFloat(expense.amount.toString()))}
@@ -101,6 +264,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
           </table>
         </div>
       </div>
+    </div>
     </div>
   )
 }
