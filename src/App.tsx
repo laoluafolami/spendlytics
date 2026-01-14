@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload } from 'lucide-react'
+import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, Menu, X } from 'lucide-react'
 import { supabase, sessionId } from './lib/supabase'
 import { Expense, ExpenseFormData } from './types/expense'
 import { useTheme } from './contexts/ThemeContext'
@@ -24,6 +24,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<View>('intro')
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const { theme, toggleTheme } = useTheme()
   const { settings } = useSettings()
 
@@ -158,6 +159,19 @@ function App() {
     )
   }
 
+  const menuItems = [
+    { view: 'dashboard' as View, icon: BarChart3, label: 'Dashboard' },
+    { view: 'list' as View, icon: List, label: 'All Expenses' },
+    { view: 'add' as View, icon: Plus, label: 'Add Expense' },
+    { view: 'analytics' as View, icon: TrendingUp, label: 'Analytics' },
+    ...(settings.feature_income ? [{ view: 'income' as View, icon: DollarSign, label: 'Income' }] : []),
+    ...(settings.feature_budgets ? [{ view: 'budgets' as View, icon: Wallet, label: 'Budgets' }] : []),
+    ...(settings.feature_savings_goals ? [{ view: 'savings' as View, icon: Target, label: 'Savings' }] : []),
+    ...(settings.feature_reports ? [{ view: 'reports' as View, icon: FileText, label: 'Reports' }] : []),
+    ...((settings.feature_import_csv || settings.feature_export_excel) ? [{ view: 'import' as View, icon: Upload, label: 'Import/Export' }] : []),
+    { view: 'settings' as View, icon: SettingsIcon, label: 'Settings' },
+  ]
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-950 transition-colors duration-500">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -165,12 +179,21 @@ function App() {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/20 dark:bg-purple-600/10 rounded-full blur-3xl"></div>
       </div>
 
-      <header className="relative z-10 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-b border-white/20 dark:border-gray-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="relative z-20 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-b border-white/20 dark:border-gray-700/50">
+        <div className="px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-              Expense Tracker
-            </h1>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm"
+                title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+              >
+                {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+                Expense Tracker
+              </h1>
+            </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleTheme}
@@ -184,189 +207,99 @@ function App() {
                 className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg"
               >
                 <Download size={18} />
-                Export PDF
+                <span className="hidden sm:inline">Export PDF</span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      <nav className="relative z-10 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-b border-white/20 dark:border-gray-700/50 sticky top-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            <button
-              onClick={() => setView('dashboard')}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                view === 'dashboard'
-                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <BarChart3 size={18} />
-              Dashboard
-            </button>
-            <button
-              onClick={() => setView('list')}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                view === 'list'
-                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <List size={18} />
-              All Expenses
-            </button>
-            <button
-              onClick={() => {
-                setEditingExpense(null)
-                setView('add')
-              }}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                view === 'add'
-                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <Plus size={18} />
-              Add Expense
-            </button>
-            <button
-              onClick={() => setView('analytics')}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                view === 'analytics'
-                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <TrendingUp size={18} />
-              Analytics
-            </button>
-            {settings.feature_income && (
-              <button
-                onClick={() => setView('income')}
-                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                  view === 'income'
-                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                <DollarSign size={18} />
-                Income
-              </button>
+      <div className="flex">
+        <aside
+          className={`fixed left-0 top-[73px] h-[calc(100vh-73px)] z-10 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-r border-white/20 dark:border-gray-700/50 transition-all duration-300 ease-in-out ${
+            sidebarOpen ? 'w-64' : 'w-0'
+          } overflow-hidden`}
+        >
+          <nav className="p-4 space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon
+              const isActive = view === item.view
+              return (
+                <button
+                  key={item.view}
+                  onClick={() => {
+                    if (item.view === 'add') {
+                      setEditingExpense(null)
+                    }
+                    setView(item.view)
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50 hover:scale-105'
+                  }`}
+                >
+                  <Icon size={20} />
+                  <span className="whitespace-nowrap">{item.label}</span>
+                </button>
+              )
+            })}
+          </nav>
+        </aside>
+
+        <main
+          className={`flex-1 relative z-10 px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300 ${
+            sidebarOpen ? 'ml-64' : 'ml-0'
+          }`}
+        >
+          <div className="max-w-7xl mx-auto">
+            {view === 'dashboard' && <Dashboard expenses={expenses} />}
+
+            {view === 'list' && (
+              <ExpenseList
+                expenses={expenses}
+                onDelete={handleDeleteExpense}
+                onEdit={handleEditExpense}
+              />
             )}
-            {settings.feature_budgets && (
-              <button
-                onClick={() => setView('budgets')}
-                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                  view === 'budgets'
-                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                <Wallet size={18} />
-                Budgets
-              </button>
+
+            {view === 'add' && (
+              <div className="max-w-2xl mx-auto">
+                <ExpenseForm
+                  onSubmit={editingExpense ? handleUpdateExpense : handleAddExpense}
+                  onCancel={editingExpense ? handleCancelEdit : undefined}
+                  initialData={editingExpense ? {
+                    amount: editingExpense.amount.toString(),
+                    category: editingExpense.category,
+                    description: editingExpense.description,
+                    date: editingExpense.date,
+                    payment_method: editingExpense.payment_method,
+                    tags: editingExpense.tags,
+                    receipt_url: editingExpense.receipt_url,
+                    is_recurring: editingExpense.is_recurring,
+                    recurrence_frequency: editingExpense.recurrence_frequency,
+                    recurrence_end_date: editingExpense.recurrence_end_date
+                  } : undefined}
+                />
+              </div>
             )}
-            {settings.feature_savings_goals && (
-              <button
-                onClick={() => setView('savings')}
-                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                  view === 'savings'
-                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                <Target size={18} />
-                Savings
-              </button>
-            )}
-            {settings.feature_reports && (
-              <button
-                onClick={() => setView('reports')}
-                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                  view === 'reports'
-                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                <FileText size={18} />
-                Reports
-              </button>
-            )}
-            {(settings.feature_import_csv || settings.feature_export_excel) && (
-              <button
-                onClick={() => setView('import')}
-                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                  view === 'import'
-                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                <Upload size={18} />
-                Import/Export
-              </button>
-            )}
-            <button
-              onClick={() => setView('settings')}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
-                view === 'settings'
-                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <SettingsIcon size={18} />
-              Settings
-            </button>
+
+            {view === 'analytics' && <Analytics expenses={expenses} />}
+
+            {view === 'income' && <IncomeManager />}
+
+            {view === 'budgets' && <BudgetManager expenses={expenses} />}
+
+            {view === 'savings' && <SavingsGoals />}
+
+            {view === 'reports' && <Reports expenses={expenses} />}
+
+            {view === 'import' && <ImportExport expenses={expenses} onImportComplete={loadExpenses} />}
+
+            {view === 'settings' && <Settings />}
           </div>
-        </div>
-      </nav>
-
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {view === 'dashboard' && <Dashboard expenses={expenses} />}
-
-        {view === 'list' && (
-          <ExpenseList
-            expenses={expenses}
-            onDelete={handleDeleteExpense}
-            onEdit={handleEditExpense}
-          />
-        )}
-
-        {view === 'add' && (
-          <div className="max-w-2xl mx-auto">
-            <ExpenseForm
-              onSubmit={editingExpense ? handleUpdateExpense : handleAddExpense}
-              onCancel={editingExpense ? handleCancelEdit : undefined}
-              initialData={editingExpense ? {
-                amount: editingExpense.amount.toString(),
-                category: editingExpense.category,
-                description: editingExpense.description,
-                date: editingExpense.date,
-                payment_method: editingExpense.payment_method,
-                tags: editingExpense.tags,
-                receipt_url: editingExpense.receipt_url,
-                is_recurring: editingExpense.is_recurring,
-                recurrence_frequency: editingExpense.recurrence_frequency,
-                recurrence_end_date: editingExpense.recurrence_end_date
-              } : undefined}
-            />
-          </div>
-        )}
-
-        {view === 'analytics' && <Analytics expenses={expenses} />}
-
-        {view === 'income' && <IncomeManager />}
-
-        {view === 'budgets' && <BudgetManager expenses={expenses} />}
-
-        {view === 'savings' && <SavingsGoals />}
-
-        {view === 'reports' && <Reports expenses={expenses} />}
-
-        {view === 'import' && <ImportExport expenses={expenses} onImportComplete={loadExpenses} />}
-
-        {view === 'settings' && <Settings />}
-      </main>
+        </main>
+      </div>
     </div>
   )
 }
