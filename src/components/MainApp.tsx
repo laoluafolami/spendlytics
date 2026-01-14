@@ -162,7 +162,7 @@ export default function MainApp() {
 
   const handleSignOut = async () => {
     await signOut()
-    navigate('/login')
+    navigate('/')
   }
 
   if (view === 'intro') {

@@ -37,7 +37,7 @@ export default function ResetPassword() {
         setError(error.message)
       } else {
         setSuccess(true)
-        setTimeout(() => navigate('/'), 2000)
+        setTimeout(() => navigate('/app'), 2000)
       }
     } catch (err) {
       setError('An unexpected error occurred')

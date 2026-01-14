@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
+import LandingPage from './components/LandingPage'
 import Login from './components/Login'
 import Signup from './components/Signup'
 import ForgotPassword from './components/ForgotPassword'
@@ -23,12 +24,13 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup />} />
+      <Route path="/" element={user ? <Navigate to="/app" replace /> : <LandingPage />} />
+      <Route path="/login" element={user ? <Navigate to="/app" replace /> : <Login />} />
+      <Route path="/signup" element={user ? <Navigate to="/app" replace /> : <Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route
-        path="/*"
+        path="/app/*"
         element={
           <ProtectedRoute>
             <MainApp />
