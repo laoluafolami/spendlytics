@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet } from 'lucide-react'
+import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload } from 'lucide-react'
 import { supabase, sessionId } from './lib/supabase'
 import { Expense, ExpenseFormData } from './types/expense'
 import { useTheme } from './contexts/ThemeContext'
@@ -13,9 +13,11 @@ import Settings from './components/Settings'
 import IncomeManager from './components/IncomeManager'
 import BudgetManager from './components/BudgetManager'
 import SavingsGoals from './components/SavingsGoals'
+import Reports from './components/Reports'
+import ImportExport from './components/ImportExport'
 import { exportExpensesToPDF } from './utils/exportPDF'
 
-type View = 'intro' | 'dashboard' | 'list' | 'add' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings'
+type View = 'intro' | 'dashboard' | 'list' | 'add' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import'
 
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -278,6 +280,32 @@ function App() {
                 Savings
               </button>
             )}
+            {settings.feature_reports && (
+              <button
+                onClick={() => setView('reports')}
+                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
+                  view === 'reports'
+                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                <FileText size={18} />
+                Reports
+              </button>
+            )}
+            {(settings.feature_import_csv || settings.feature_export_excel) && (
+              <button
+                onClick={() => setView('import')}
+                className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
+                  view === 'import'
+                    ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                <Upload size={18} />
+                Import/Export
+              </button>
+            )}
             <button
               onClick={() => setView('settings')}
               className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
@@ -332,6 +360,10 @@ function App() {
         {view === 'budgets' && <BudgetManager expenses={expenses} />}
 
         {view === 'savings' && <SavingsGoals />}
+
+        {view === 'reports' && <Reports expenses={expenses} />}
+
+        {view === 'import' && <ImportExport expenses={expenses} onImportComplete={loadExpenses} />}
 
         {view === 'settings' && <Settings />}
       </main>
