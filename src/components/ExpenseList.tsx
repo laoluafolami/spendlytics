@@ -1,6 +1,7 @@
 import { Trash2, Edit2, Inbox } from 'lucide-react'
 import { Expense } from '../types/expense'
 import { format } from 'date-fns'
+import { useCurrency } from '../contexts/CurrencyContext'
 
 interface ExpenseListProps {
   expenses: Expense[]
@@ -9,6 +10,7 @@ interface ExpenseListProps {
 }
 
 export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListProps) {
+  const { formatAmount } = useCurrency()
   if (expenses.length === 0) {
     return (
       <div className="relative animate-fade-in">
@@ -68,7 +70,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
                     <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
-                      ${parseFloat(expense.amount.toString()).toFixed(2)}
+                      {formatAmount(parseFloat(expense.amount.toString()))}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

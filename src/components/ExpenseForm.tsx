@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { EXPENSE_CATEGORIES, ExpenseFormData } from '../types/expense'
 import { Save, X } from 'lucide-react'
+import { useCurrency } from '../contexts/CurrencyContext'
 
 interface ExpenseFormProps {
   onSubmit: (data: ExpenseFormData) => Promise<void>
@@ -9,6 +10,7 @@ interface ExpenseFormProps {
 }
 
 export default function ExpenseForm({ onSubmit, onCancel, initialData }: ExpenseFormProps) {
+  const { currency } = useCurrency()
   const [formData, setFormData] = useState<ExpenseFormData>(
     initialData || {
       amount: '',
@@ -49,7 +51,7 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
               Amount
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-3.5 text-gray-500 dark:text-gray-400 text-lg font-medium">$</span>
+              <span className="absolute left-4 top-3.5 text-gray-500 dark:text-gray-400 text-lg font-medium">{currency.symbol}</span>
               <input
                 type="number"
                 id="amount"

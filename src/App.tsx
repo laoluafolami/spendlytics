@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Download, Plus, BarChart3, List, Sun, Moon } from 'lucide-react'
+import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { Expense, ExpenseFormData } from './types/expense'
 import { useTheme } from './contexts/ThemeContext'
@@ -7,9 +7,11 @@ import IntroPage from './components/IntroPage'
 import ExpenseForm from './components/ExpenseForm'
 import ExpenseList from './components/ExpenseList'
 import Dashboard from './components/Dashboard'
+import Analytics from './components/Analytics'
+import Settings from './components/Settings'
 import { exportExpensesToPDF } from './utils/exportPDF'
 
-type View = 'intro' | 'dashboard' | 'list' | 'add'
+type View = 'intro' | 'dashboard' | 'list' | 'add' | 'analytics' | 'settings'
 
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -207,6 +209,28 @@ function App() {
               <Plus size={18} />
               Add Expense
             </button>
+            <button
+              onClick={() => setView('analytics')}
+              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
+                view === 'analytics'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+            >
+              <TrendingUp size={18} />
+              Analytics
+            </button>
+            <button
+              onClick={() => setView('settings')}
+              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
+                view === 'settings'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+            >
+              <SettingsIcon size={18} />
+              Settings
+            </button>
           </div>
         </div>
       </nav>
@@ -236,6 +260,10 @@ function App() {
             />
           </div>
         )}
+
+        {view === 'analytics' && <Analytics expenses={expenses} />}
+
+        {view === 'settings' && <Settings />}
       </main>
     </div>
   )

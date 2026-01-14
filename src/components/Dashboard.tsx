@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis
 import { Expense } from '../types/expense'
 import { format, eachMonthOfInterval, subMonths } from 'date-fns'
 import { DollarSign, TrendingUp, Calendar, PieChart as PieChartIcon, Sparkles } from 'lucide-react'
+import { useCurrency } from '../contexts/CurrencyContext'
 
 interface DashboardProps {
   expenses: Expense[]
@@ -11,6 +12,8 @@ interface DashboardProps {
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1']
 
 export default function Dashboard({ expenses }: DashboardProps) {
+  const { formatAmount } = useCurrency()
+
   const stats = useMemo(() => {
     const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount.toString()), 0)
     const thisMonth = expenses.filter(exp => {
@@ -78,7 +81,7 @@ export default function Dashboard({ expenses }: DashboardProps) {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Total Expenses</p>
                 <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                  ${stats.total.toFixed(2)}
+                  {formatAmount(stats.total)}
                 </p>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
@@ -95,7 +98,7 @@ export default function Dashboard({ expenses }: DashboardProps) {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">This Month</p>
                 <p className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
-                  ${stats.monthlyTotal.toFixed(2)}
+                  {formatAmount(stats.monthlyTotal)}
                 </p>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
@@ -151,7 +154,7 @@ export default function Dashboard({ expenses }: DashboardProps) {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value) => `$${value}`}
+                    formatter={(value) => formatAmount(value as number)}
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.9)',
                       backdropFilter: 'blur(10px)',
@@ -187,7 +190,7 @@ export default function Dashboard({ expenses }: DashboardProps) {
                     className="text-gray-600 dark:text-gray-400"
                   />
                   <Tooltip
-                    formatter={(value) => `$${value}`}
+                    formatter={(value) => formatAmount(value as number)}
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.9)',
                       backdropFilter: 'blur(10px)',
