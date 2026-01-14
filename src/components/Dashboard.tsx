@@ -76,51 +76,45 @@ export default function Dashboard({ expenses }: DashboardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="group relative">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-          <div className="relative p-6 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Total Expenses</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                  {formatAmount(stats.total)}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
-                <DollarSign className="text-white" size={20} />
-              </div>
+          <div className="relative p-4 sm:p-6 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 flex items-center justify-center absolute top-3 right-3 group-hover:rotate-6 transition-transform shadow-lg">
+              <DollarSign className="text-white" size={14} />
+            </div>
+            <div className="pr-10">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1 font-medium">Total Expenses</p>
+              <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                {formatAmount(stats.total)}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="group relative">
           <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-          <div className="relative p-6 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">This Month</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
-                  {formatAmount(stats.monthlyTotal)}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
-                <Calendar className="text-white" size={20} />
-              </div>
+          <div className="relative p-4 sm:p-6 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 flex items-center justify-center absolute top-3 right-3 group-hover:rotate-6 transition-transform shadow-lg">
+              <Calendar className="text-white" size={14} />
+            </div>
+            <div className="pr-10">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1 font-medium">This Month</p>
+              <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                {formatAmount(stats.monthlyTotal)}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="group relative">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-pink-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-          <div className="relative p-6 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Total Transactions</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 dark:from-orange-400 dark:to-pink-400 bg-clip-text text-transparent">
-                  {stats.count}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-pink-600 dark:from-orange-600 dark:to-pink-700 flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg">
-                <TrendingUp className="text-white" size={20} />
-              </div>
+          <div className="relative p-4 sm:p-6 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-pink-600 dark:from-orange-600 dark:to-pink-700 flex items-center justify-center absolute top-3 right-3 group-hover:rotate-6 transition-transform shadow-lg">
+              <TrendingUp className="text-white" size={14} />
+            </div>
+            <div className="pr-10">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1 font-medium">Total Transactions</p>
+              <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 dark:from-orange-400 dark:to-pink-400 bg-clip-text text-transparent">
+                {stats.count}
+              </p>
             </div>
           </div>
         </div>
