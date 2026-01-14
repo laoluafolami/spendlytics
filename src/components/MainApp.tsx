@@ -16,7 +16,6 @@ import BudgetManager from './BudgetManager'
 import SavingsGoals from './SavingsGoals'
 import Reports from './Reports'
 import ImportExport from './ImportExport'
-import { Tooltip } from './Tooltip'
 
 type View = 'dashboard' | 'list' | 'add' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import'
 
@@ -25,11 +24,25 @@ export default function MainApp() {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<View>('dashboard')
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const { settings } = useSettings()
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true)
+      } else {
+        setSidebarOpen(false)
+      }
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     loadExpenses()
@@ -182,43 +195,43 @@ export default function MainApp() {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/20 dark:bg-purple-600/10 rounded-full blur-3xl"></div>
       </div>
 
-      <header className="relative z-20 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-b border-white/20 dark:border-gray-700/50">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
+      <header className="relative z-20 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-b border-white/20 dark:border-gray-700/50 safe-top">
+        <div className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg"
+                className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg touch-target"
                 title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
               >
                 {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
               </button>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
                 Expense Tracker
               </h1>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/50 rounded-xl backdrop-blur-sm">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/50 rounded-xl backdrop-blur-sm">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
                   {user?.email?.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[150px] truncate">
                   {user?.email}
                 </span>
               </div>
               <button
                 onClick={toggleTheme}
-                className="p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm"
+                className="p-2 sm:p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm touch-target"
                 title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
               >
                 {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
               </button>
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg touch-target"
               >
-                <LogOut size={18} />
-                <span className="hidden sm:inline">Sign Out</span>
+                <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
+                <span className="hidden sm:inline text-sm">Sign Out</span>
               </button>
             </div>
           </div>
@@ -226,23 +239,28 @@ export default function MainApp() {
       </header>
 
       <div className="flex">
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/20 dark:bg-black/40 z-30 lg:hidden backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         <aside
-          className={`fixed left-0 top-[73px] h-[calc(100vh-73px)] z-10 backdrop-blur-md bg-gradient-to-b from-white/40 via-white/30 to-white/20 dark:from-gray-900/40 dark:via-gray-900/30 dark:to-gray-900/20 border-r border-white/30 dark:border-gray-700/50 transition-all duration-300 ease-in-out shadow-2xl ${
-            sidebarOpen ? 'w-64' : 'w-20'
-          }`}
+          className={`fixed left-0 top-[73px] h-[calc(100vh-73px)] z-40 backdrop-blur-md bg-gradient-to-b from-white/40 via-white/30 to-white/20 dark:from-gray-900/40 dark:via-gray-900/30 dark:to-gray-900/20 border-r border-white/30 dark:border-gray-700/50 transition-all duration-300 ease-in-out shadow-2xl ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0 w-64 lg:w-64`}
         >
           <div className="relative h-full">
-            {sidebarOpen && (
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="absolute top-4 right-4 p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg z-20"
-                title="Close sidebar"
-              >
-                <ChevronLeft size={18} />
-              </button>
-            )}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden absolute top-4 right-4 p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg z-20"
+              title="Close sidebar"
+            >
+              <ChevronLeft size={18} />
+            </button>
 
-            <nav className={`p-4 space-y-2 h-full overflow-y-auto ${sidebarOpen ? 'pt-16' : 'pt-4'}`}>
+            <nav className="p-4 space-y-2 h-full overflow-y-auto pt-16 lg:pt-4">
               {menuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = view === item.view
@@ -254,10 +272,11 @@ export default function MainApp() {
                         setEditingExpense(null)
                       }
                       setView(item.view)
+                      if (window.innerWidth < 1024) {
+                        setSidebarOpen(false)
+                      }
                     }}
-                    className={`group w-full flex items-center gap-3 rounded-xl font-medium transition-all duration-300 ${
-                      sidebarOpen ? 'px-4 py-3.5' : 'px-3 py-3.5 justify-center'
-                    } ${
+                    className={`group w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300 ${
                       isActive
                         ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
                         : `bg-gradient-to-br ${item.bgGradient} hover:bg-white/50 dark:hover:bg-gray-800/50 hover:scale-105 border border-transparent hover:border-white/40 dark:hover:border-gray-700/50`
@@ -268,32 +287,24 @@ export default function MainApp() {
                     }`}>
                       <Icon size={22} strokeWidth={2.5} />
                     </div>
-                    {sidebarOpen && (
-                      <span className={`whitespace-nowrap font-semibold ${
-                        isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                      }`}>
-                        {item.label}
-                      </span>
-                    )}
+                    <span className={`whitespace-nowrap font-semibold ${
+                      isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      {item.label}
+                    </span>
                   </button>
                 )
 
-                return (
-                  <Tooltip key={item.view} content={item.label} show={!sidebarOpen}>
-                    {button}
-                  </Tooltip>
-                )
+                return button
               })}
             </nav>
           </div>
         </aside>
 
         <main
-          className={`flex-1 relative z-10 px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300 ${
-            sidebarOpen ? 'ml-64' : 'ml-20'
-          }`}
+          className="flex-1 relative z-10 px-3 sm:px-6 lg:px-8 py-6 sm:py-8 transition-all duration-300 lg:ml-64"
         >
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto mobile-scroll">
             {view === 'dashboard' && <Dashboard expenses={expenses} />}
 
             {view === 'list' && (
