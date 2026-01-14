@@ -217,19 +217,21 @@ function App() {
       <div className="flex">
         <aside
           className={`fixed left-0 top-[73px] h-[calc(100vh-73px)] z-10 backdrop-blur-md bg-gradient-to-b from-white/40 via-white/30 to-white/20 dark:from-gray-900/40 dark:via-gray-900/30 dark:to-gray-900/20 border-r border-white/30 dark:border-gray-700/50 transition-all duration-300 ease-in-out shadow-2xl ${
-            sidebarOpen ? 'w-64' : 'w-0'
-          } overflow-hidden`}
+            sidebarOpen ? 'w-64' : 'w-20'
+          }`}
         >
           <div className="relative h-full">
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="absolute top-4 right-4 p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg z-20"
-              title="Close sidebar"
-            >
-              <ChevronLeft size={18} />
-            </button>
+            {sidebarOpen && (
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="absolute top-4 right-4 p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg z-20"
+                title="Close sidebar"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            )}
 
-            <nav className="p-4 pt-16 space-y-2 h-full overflow-y-auto">
+            <nav className={`p-4 space-y-2 h-full overflow-y-auto ${sidebarOpen ? 'pt-16' : 'pt-4'}`}>
               {menuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = view === item.view
@@ -242,22 +244,27 @@ function App() {
                       }
                       setView(item.view)
                     }}
-                    className={`group w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300 ${
+                    className={`group w-full flex items-center gap-3 rounded-xl font-medium transition-all duration-300 ${
+                      sidebarOpen ? 'px-4 py-3.5' : 'px-3 py-3.5 justify-center'
+                    } ${
                       isActive
                         ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
                         : `bg-gradient-to-br ${item.bgGradient} hover:bg-white/50 dark:hover:bg-gray-800/50 hover:scale-105 border border-transparent hover:border-white/40 dark:hover:border-gray-700/50`
                     }`}
+                    title={!sidebarOpen ? item.label : undefined}
                   >
                     <div className={`transform transition-all duration-300 group-hover:rotate-12 group-hover:scale-110 ${
                       isActive ? 'text-white' : item.color
                     }`}>
                       <Icon size={22} strokeWidth={2.5} />
                     </div>
-                    <span className={`whitespace-nowrap font-semibold ${
-                      isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                    }`}>
-                      {item.label}
-                    </span>
+                    {sidebarOpen && (
+                      <span className={`whitespace-nowrap font-semibold ${
+                        isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                      }`}>
+                        {item.label}
+                      </span>
+                    )}
                   </button>
                 )
               })}
@@ -267,7 +274,7 @@ function App() {
 
         <main
           className={`flex-1 relative z-10 px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300 ${
-            sidebarOpen ? 'ml-64' : 'ml-0'
+            sidebarOpen ? 'ml-64' : 'ml-20'
           }`}
         >
           <div className="max-w-7xl mx-auto">
