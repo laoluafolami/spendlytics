@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, Menu, X } from 'lucide-react'
+import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase, sessionId } from './lib/supabase'
 import { Expense, ExpenseFormData } from './types/expense'
 import { useTheme } from './contexts/ThemeContext'
@@ -160,16 +160,16 @@ function App() {
   }
 
   const menuItems = [
-    { view: 'dashboard' as View, icon: BarChart3, label: 'Dashboard' },
-    { view: 'list' as View, icon: List, label: 'All Expenses' },
-    { view: 'add' as View, icon: Plus, label: 'Add Expense' },
-    { view: 'analytics' as View, icon: TrendingUp, label: 'Analytics' },
-    ...(settings.feature_income ? [{ view: 'income' as View, icon: DollarSign, label: 'Income' }] : []),
-    ...(settings.feature_budgets ? [{ view: 'budgets' as View, icon: Wallet, label: 'Budgets' }] : []),
-    ...(settings.feature_savings_goals ? [{ view: 'savings' as View, icon: Target, label: 'Savings' }] : []),
-    ...(settings.feature_reports ? [{ view: 'reports' as View, icon: FileText, label: 'Reports' }] : []),
-    ...((settings.feature_import_csv || settings.feature_export_excel) ? [{ view: 'import' as View, icon: Upload, label: 'Import/Export' }] : []),
-    { view: 'settings' as View, icon: SettingsIcon, label: 'Settings' },
+    { view: 'dashboard' as View, icon: BarChart3, label: 'Dashboard', color: 'text-blue-500', bgGradient: 'from-blue-500/10 to-blue-600/10' },
+    { view: 'list' as View, icon: List, label: 'All Expenses', color: 'text-emerald-500', bgGradient: 'from-emerald-500/10 to-emerald-600/10' },
+    { view: 'add' as View, icon: Plus, label: 'Add Expense', color: 'text-violet-500', bgGradient: 'from-violet-500/10 to-violet-600/10' },
+    { view: 'analytics' as View, icon: TrendingUp, label: 'Analytics', color: 'text-orange-500', bgGradient: 'from-orange-500/10 to-orange-600/10' },
+    ...(settings.feature_income ? [{ view: 'income' as View, icon: DollarSign, label: 'Income', color: 'text-green-500', bgGradient: 'from-green-500/10 to-green-600/10' }] : []),
+    ...(settings.feature_budgets ? [{ view: 'budgets' as View, icon: Wallet, label: 'Budgets', color: 'text-amber-500', bgGradient: 'from-amber-500/10 to-amber-600/10' }] : []),
+    ...(settings.feature_savings_goals ? [{ view: 'savings' as View, icon: Target, label: 'Savings', color: 'text-pink-500', bgGradient: 'from-pink-500/10 to-pink-600/10' }] : []),
+    ...(settings.feature_reports ? [{ view: 'reports' as View, icon: FileText, label: 'Reports', color: 'text-cyan-500', bgGradient: 'from-cyan-500/10 to-cyan-600/10' }] : []),
+    ...((settings.feature_import_csv || settings.feature_export_excel) ? [{ view: 'import' as View, icon: Upload, label: 'Import/Export', color: 'text-teal-500', bgGradient: 'from-teal-500/10 to-teal-600/10' }] : []),
+    { view: 'settings' as View, icon: SettingsIcon, label: 'Settings', color: 'text-gray-500', bgGradient: 'from-gray-500/10 to-gray-600/10' },
   ]
 
   return (
@@ -185,10 +185,10 @@ function App() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm"
+                className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg"
                 title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
               >
-                {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
               </button>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
                 Expense Tracker
@@ -216,35 +216,53 @@ function App() {
 
       <div className="flex">
         <aside
-          className={`fixed left-0 top-[73px] h-[calc(100vh-73px)] z-10 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-r border-white/20 dark:border-gray-700/50 transition-all duration-300 ease-in-out ${
+          className={`fixed left-0 top-[73px] h-[calc(100vh-73px)] z-10 backdrop-blur-md bg-gradient-to-b from-white/40 via-white/30 to-white/20 dark:from-gray-900/40 dark:via-gray-900/30 dark:to-gray-900/20 border-r border-white/30 dark:border-gray-700/50 transition-all duration-300 ease-in-out shadow-2xl ${
             sidebarOpen ? 'w-64' : 'w-0'
           } overflow-hidden`}
         >
-          <nav className="p-4 space-y-2">
-            {menuItems.map((item) => {
-              const Icon = item.icon
-              const isActive = view === item.view
-              return (
-                <button
-                  key={item.view}
-                  onClick={() => {
-                    if (item.view === 'add') {
-                      setEditingExpense(null)
-                    }
-                    setView(item.view)
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50 hover:scale-105'
-                  }`}
-                >
-                  <Icon size={20} />
-                  <span className="whitespace-nowrap">{item.label}</span>
-                </button>
-              )
-            })}
-          </nav>
+          <div className="relative h-full">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg z-20"
+              title="Close sidebar"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <nav className="p-4 pt-16 space-y-2 h-full overflow-y-auto">
+              {menuItems.map((item) => {
+                const Icon = item.icon
+                const isActive = view === item.view
+                return (
+                  <button
+                    key={item.view}
+                    onClick={() => {
+                      if (item.view === 'add') {
+                        setEditingExpense(null)
+                      }
+                      setView(item.view)
+                    }}
+                    className={`group w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
+                        : `bg-gradient-to-br ${item.bgGradient} hover:bg-white/50 dark:hover:bg-gray-800/50 hover:scale-105 border border-transparent hover:border-white/40 dark:hover:border-gray-700/50`
+                    }`}
+                  >
+                    <div className={`transform transition-all duration-300 group-hover:rotate-12 group-hover:scale-110 ${
+                      isActive ? 'text-white' : item.color
+                    }`}>
+                      <Icon size={22} strokeWidth={2.5} />
+                    </div>
+                    <span className={`whitespace-nowrap font-semibold ${
+                      isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      {item.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
         </aside>
 
         <main
