@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react'
-import { Download, Plus, BarChart3, List } from 'lucide-react'
+import { Download, Plus, BarChart3, List, Sun, Moon } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { Expense, ExpenseFormData } from './types/expense'
+import { useTheme } from './contexts/ThemeContext'
+import IntroPage from './components/IntroPage'
 import ExpenseForm from './components/ExpenseForm'
 import ExpenseList from './components/ExpenseList'
 import Dashboard from './components/Dashboard'
 import { exportExpensesToPDF } from './utils/exportPDF'
 
-type View = 'dashboard' | 'list' | 'add'
+type View = 'intro' | 'dashboard' | 'list' | 'add'
 
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<View>('dashboard')
+  const [view, setView] = useState<View>('intro')
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const { theme, toggleTheme } = useTheme()
 
   useEffect(() => {
     loadExpenses()
@@ -113,43 +116,67 @@ function App() {
     exportExpensesToPDF(expenses)
   }
 
+  const handleGetStarted = () => {
+    setView('dashboard')
+  }
+
+  if (view === 'intro') {
+    return <IntroPage onGetStarted={handleGetStarted} />
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-950 transition-colors duration-500 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading expenses...</p>
+          <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-6 text-gray-600 dark:text-gray-400 font-medium">Loading expenses...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-950 transition-colors duration-500">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400/20 dark:bg-blue-600/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/20 dark:bg-purple-600/10 rounded-full blur-3xl"></div>
+      </div>
+
+      <header className="relative z-10 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-b border-white/20 dark:border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Expense Tracker</h1>
-            <button
-              onClick={handleExportPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-            >
-              <Download size={18} />
-              Export PDF
-            </button>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+              Expense Tracker
+            </h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm"
+                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              >
+                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+              </button>
+              <button
+                onClick={handleExportPDF}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg"
+              >
+                <Download size={18} />
+                Export PDF
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <nav className="relative z-10 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-b border-white/20 dark:border-gray-700/50 sticky top-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             <button
               onClick={() => setView('dashboard')}
-              className={`flex items-center gap-2 px-3 py-4 border-b-2 font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
                 view === 'dashboard'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <BarChart3 size={18} />
@@ -157,10 +184,10 @@ function App() {
             </button>
             <button
               onClick={() => setView('list')}
-              className={`flex items-center gap-2 px-3 py-4 border-b-2 font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
                 view === 'list'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <List size={18} />
@@ -171,10 +198,10 @@ function App() {
                 setEditingExpense(null)
                 setView('add')
               }}
-              className={`flex items-center gap-2 px-3 py-4 border-b-2 font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-4 border-b-2 font-semibold transition-all duration-300 ${
                 view === 'add'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <Plus size={18} />
@@ -184,7 +211,7 @@ function App() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {view === 'dashboard' && <Dashboard expenses={expenses} />}
 
         {view === 'list' && (
