@@ -7,6 +7,7 @@ import ForgotPassword from './components/ForgotPassword'
 import ResetPassword from './components/ResetPassword'
 import ProtectedRoute from './components/ProtectedRoute'
 import MainApp from './components/MainApp'
+import InstallPrompt from './components/InstallPrompt'
 
 function App() {
   const { user, loading } = useAuth()
@@ -23,21 +24,24 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={user ? <Navigate to="/app" replace /> : <LandingPage />} />
-      <Route path="/login" element={user ? <Navigate to="/app" replace /> : <Login />} />
-      <Route path="/signup" element={user ? <Navigate to="/app" replace /> : <Signup />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route
-        path="/app/*"
-        element={
-          <ProtectedRoute>
-            <MainApp />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={user ? <Navigate to="/app" replace /> : <LandingPage />} />
+        <Route path="/login" element={user ? <Navigate to="/app" replace /> : <Login />} />
+        <Route path="/signup" element={user ? <Navigate to="/app" replace /> : <Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/app/*"
+          element={
+            <ProtectedRoute>
+              <MainApp />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+      <InstallPrompt />
+    </>
   )
 }
 
