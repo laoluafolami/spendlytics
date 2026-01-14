@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon } from 'lucide-react'
-import { supabase } from './lib/supabase'
+import { supabase, sessionId } from './lib/supabase'
 import { Expense, ExpenseFormData } from './types/expense'
 import { useTheme } from './contexts/ThemeContext'
 import IntroPage from './components/IntroPage'
@@ -54,7 +54,8 @@ function App() {
           receipt_url: formData.receipt_url,
           is_recurring: formData.is_recurring || false,
           recurrence_frequency: formData.recurrence_frequency,
-          recurrence_end_date: formData.recurrence_end_date || null
+          recurrence_end_date: formData.recurrence_end_date || null,
+          session_id: sessionId
         }])
 
       if (error) throw error
@@ -83,7 +84,8 @@ function App() {
           is_recurring: formData.is_recurring || false,
           recurrence_frequency: formData.recurrence_frequency,
           recurrence_end_date: formData.recurrence_end_date || null,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          session_id: sessionId
         })
         .eq('id', editingExpense.id)
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, sessionId } from '../lib/supabase'
 
 export interface AppSettings {
   id?: string
@@ -95,7 +95,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = async (newSettings: Partial<AppSettings>) => {
     try {
-      const updatedSettings = { ...settings, ...newSettings }
+      const updatedSettings = { ...settings, ...newSettings, session_id: sessionId }
 
       if (settings.id) {
         const { error } = await supabase
