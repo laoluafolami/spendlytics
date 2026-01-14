@@ -96,29 +96,38 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = async (newSettings: Partial<AppSettings>) => {
     try {
-      const updatedSettings = { ...settings, ...newSettings, session_id: sessionId }
+      const updatedSettings = { ...settings, ...newSettings }
 
       if (settings.id) {
-        const { error } = await supabase
-          .from('app_settings')
-          .update(updatedSettings)
-          .eq('id', settings.id)
+        const updatePayload = { ...newSettings }
 
-        if (error) throw error
-      } else {
         const { data, error } = await supabase
           .from('app_settings')
-          .insert([updatedSettings])
+          .update(updatePayload)
+          .eq('id', settings.id)
           .select()
           .single()
 
         if (error) throw error
+
         if (data) {
-          updatedSettings.id = data.id
+          setSettings(data)
+        }
+      } else {
+        const insertPayload = { ...updatedSettings, session_id: sessionId }
+
+        const { data, error } = await supabase
+          .from('app_settings')
+          .insert([insertPayload])
+          .select()
+          .single()
+
+        if (error) throw error
+
+        if (data) {
+          setSettings(data)
         }
       }
-
-      setSettings(updatedSettings)
     } catch (error) {
       console.error('Error updating settings:', error)
       throw error
