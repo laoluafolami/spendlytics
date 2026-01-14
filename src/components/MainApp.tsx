@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Download, Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Expense, ExpenseFormData } from '../types/expense'
 import { useTheme } from '../contexts/ThemeContext'
@@ -17,7 +17,6 @@ import BudgetManager from './BudgetManager'
 import SavingsGoals from './SavingsGoals'
 import Reports from './Reports'
 import ImportExport from './ImportExport'
-import { exportExpensesToPDF } from '../utils/exportPDF'
 import { Tooltip } from './Tooltip'
 
 type View = 'intro' | 'dashboard' | 'list' | 'add' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import'
@@ -148,14 +147,6 @@ export default function MainApp() {
     setView('list')
   }
 
-  const handleExportPDF = () => {
-    if (expenses.length === 0) {
-      alert('No expenses to export')
-      return
-    }
-    exportExpensesToPDF(expenses)
-  }
-
   const handleGetStarted = () => {
     setView('dashboard')
   }
@@ -216,19 +207,20 @@ export default function MainApp() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/50 rounded-xl backdrop-blur-sm">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                  {user?.email?.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {user?.email}
+                </span>
+              </div>
               <button
                 onClick={toggleTheme}
                 className="p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm"
                 title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
               >
                 {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-              </button>
-              <button
-                onClick={handleExportPDF}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg"
-              >
-                <Download size={18} />
-                <span className="hidden sm:inline">Export PDF</span>
               </button>
               <button
                 onClick={handleSignOut}

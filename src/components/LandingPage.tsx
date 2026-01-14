@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { TrendingUp, Wallet, PieChart, Shield, Zap, Target, ArrowRight, LogIn, UserPlus } from 'lucide-react'
+import { TrendingUp, Wallet, PieChart, Shield, Zap, Target, ArrowRight } from 'lucide-react'
 
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -59,27 +59,9 @@ export default function LandingPage() {
       <div className="relative z-10">
         <header className="backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-b border-white/20 dark:border-gray-700/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-                Expense Tracker
-              </h1>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => navigate('/login')}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 rounded-xl font-medium transform hover:scale-105 transition-all duration-300 backdrop-blur-sm"
-                >
-                  <LogIn size={18} />
-                  <span>Sign In</span>
-                </button>
-                <button
-                  onClick={() => navigate('/signup')}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg"
-                >
-                  <UserPlus size={18} />
-                  <span>Sign Up</span>
-                </button>
-              </div>
-            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+              Expense Tracker
+            </h1>
           </div>
         </header>
 
