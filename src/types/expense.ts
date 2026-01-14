@@ -65,7 +65,9 @@ export interface FilterPreset {
 
 export const EXPENSE_CATEGORIES = [
   'Food & Dining',
+  'Groceries',
   'Transportation',
+  'Car Repairs',
   'Shopping',
   'Entertainment',
   'Bills & Utilities',
@@ -73,6 +75,7 @@ export const EXPENSE_CATEGORIES = [
   'Education',
   'Travel',
   'Housing',
+  'House Repairs',
   'Other'
 ] as const
 
