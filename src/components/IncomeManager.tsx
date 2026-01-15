@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, TrendingUp, Edit2, Trash2, Calendar, DollarSign, X } from 'lucide-react'
-import { supabase, sessionId } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { format } from 'date-fns'
 
@@ -56,8 +56,7 @@ export default function IncomeManager() {
         description: formData.description,
         amount: parseFloat(formData.amount),
         category: formData.category,
-        date: formData.date,
-        session_id: sessionId
+        date: formData.date
       }
 
       if (editingIncome) {

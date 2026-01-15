@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Plus, Target, Edit2, Trash2, X, AlertTriangle } from 'lucide-react'
-import { supabase, sessionId } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { Expense, EXPENSE_CATEGORIES } from '../types/expense'
 
@@ -58,8 +58,7 @@ export default function BudgetManager({ expenses }: BudgetManagerProps) {
         category: formData.category,
         amount: parseFloat(formData.amount),
         budget_month: formData.budget_month,
-        budget_year: formData.budget_year,
-        session_id: sessionId
+        budget_year: formData.budget_year
       }
 
       if (editingBudget) {

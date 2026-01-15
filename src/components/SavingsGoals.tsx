@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Target, Edit2, Trash2, X, TrendingUp, Calendar } from 'lucide-react'
-import { supabase, sessionId } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { format, differenceInDays } from 'date-fns'
 
@@ -54,8 +54,7 @@ export default function SavingsGoals() {
         name: formData.name,
         target_amount: parseFloat(formData.target_amount),
         current_amount: parseFloat(formData.current_amount),
-        deadline: formData.deadline || null,
-        session_id: sessionId
+        deadline: formData.deadline || null
       }
 
       if (editingGoal) {
