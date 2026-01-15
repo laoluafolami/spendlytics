@@ -46,13 +46,19 @@ export default function MainApp() {
 
   useEffect(() => {
     loadExpenses()
-  }, [])
+  }, [user])
 
   const loadExpenses = async () => {
+    if (!user) {
+      setLoading(false)
+      return
+    }
+
     try {
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false })
 
       if (error) throw error
@@ -65,10 +71,13 @@ export default function MainApp() {
   }
 
   const handleAddExpense = async (formData: ExpenseFormData) => {
+    if (!user) return
+
     try {
       const { error } = await supabase
         .from('expenses')
         .insert([{
+          user_id: user.id,
           amount: parseFloat(formData.amount),
           category: formData.category,
           description: formData.description,
@@ -91,7 +100,7 @@ export default function MainApp() {
   }
 
   const handleUpdateExpense = async (formData: ExpenseFormData) => {
-    if (!editingExpense) return
+    if (!editingExpense || !user) return
 
     try {
       const { error } = await supabase
@@ -110,6 +119,7 @@ export default function MainApp() {
           updated_at: new Date().toISOString(),
         })
         .eq('id', editingExpense.id)
+        .eq('user_id', user.id)
 
       if (error) throw error
       await loadExpenses()
@@ -122,11 +132,14 @@ export default function MainApp() {
   }
 
   const handleDeleteExpense = async (id: string) => {
+    if (!user) return
+
     try {
       const { error } = await supabase
         .from('expenses')
         .delete()
         .eq('id', id)
+        .eq('user_id', user.id)
 
       if (error) throw error
       await loadExpenses()
@@ -144,6 +157,15 @@ export default function MainApp() {
   const handleCancelEdit = () => {
     setEditingExpense(null)
     setView('list')
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      navigate('/', { replace: true })
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
   const handleSignOut = async () => {

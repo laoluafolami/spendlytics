@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from './AuthContext'
 
 export interface AppSettings {
   id?: string
@@ -69,16 +70,23 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings)
   const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
   useEffect(() => {
     loadSettings()
-  }, [])
+  }, [user])
 
   const loadSettings = async () => {
+    if (!user) {
+      setLoading(false)
+      return
+    }
+    
     try {
       const { data, error } = await supabase
         .from('app_settings')
         .select('*')
+        .eq('user_id', user.id)
         .limit(1)
         .maybeSingle()
 
@@ -95,6 +103,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }
 
   const updateSettings = async (newSettings: Partial<AppSettings>) => {
+    if (!user) return
+    
     try {
       const updatedSettings = { ...settings, ...newSettings }
 
@@ -105,6 +115,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           .from('app_settings')
           .update(updatePayload)
           .eq('id', settings.id)
+          .eq('user_id', user.id)
           .select()
           .maybeSingle()
 
@@ -117,7 +128,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setSettings(data)
         }
       } else {
-        const insertPayload = { ...updatedSettings }
+        const insertPayload = { ...updatedSettings, user_id: user.id }
         delete (insertPayload as any).id
 
         const { data, error } = await supabase

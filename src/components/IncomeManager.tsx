@@ -3,6 +3,7 @@ import { Plus, TrendingUp, Edit2, Trash2, Calendar, DollarSign, X } from 'lucide
 import { supabase } from '../lib/supabase'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { format } from 'date-fns'
+import { useAuth } from '../contexts/AuthContext'
 
 interface Income {
   id: string
@@ -17,6 +18,7 @@ const INCOME_CATEGORIES = ['Salary', 'Freelance', 'Investment', 'Bonus', 'Gift',
 
 export default function IncomeManager() {
   const { formatAmount } = useCurrency()
+  const { user } = useAuth()
   const [incomes, setIncomes] = useState<Income[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -33,10 +35,13 @@ export default function IncomeManager() {
   }, [])
 
   const loadIncomes = async () => {
+    if (!user) return
+    
     try {
       const { data, error } = await supabase
         .from('app_income')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false })
 
       if (error) throw error
@@ -50,9 +55,11 @@ export default function IncomeManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) return
 
     try {
       const incomeData = {
+        user_id: user.id,
         description: formData.description,
         amount: parseFloat(formData.amount),
         category: formData.category,

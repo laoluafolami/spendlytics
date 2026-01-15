@@ -3,6 +3,7 @@ import { Plus, Target, Edit2, Trash2, X, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { Expense, EXPENSE_CATEGORIES } from '../types/expense'
+import { useAuth } from '../contexts/AuthContext'
 
 interface Budget {
   id: string
@@ -19,6 +20,7 @@ interface BudgetManagerProps {
 
 export default function BudgetManager({ expenses }: BudgetManagerProps) {
   const { formatAmount } = useCurrency()
+  const { user } = useAuth()
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -35,10 +37,13 @@ export default function BudgetManager({ expenses }: BudgetManagerProps) {
   }, [])
 
   const loadBudgets = async () => {
+    if (!user) return
+    
     try {
       const { data, error } = await supabase
         .from('app_budgets')
         .select('*')
+        .eq('user_id', user.id)
         .order('category', { ascending: true })
 
       if (error) throw error
@@ -52,9 +57,11 @@ export default function BudgetManager({ expenses }: BudgetManagerProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) return
 
     try {
       const budgetData = {
+        user_id: user.id,
         category: formData.category,
         amount: parseFloat(formData.amount),
         budget_month: formData.budget_month,

@@ -3,6 +3,7 @@ import { Plus, Target, Edit2, Trash2, X, TrendingUp, Calendar } from 'lucide-rea
 import { supabase } from '../lib/supabase'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { format, differenceInDays } from 'date-fns'
+import { useAuth } from '../contexts/AuthContext'
 
 interface SavingsGoal {
   id: string
@@ -15,6 +16,7 @@ interface SavingsGoal {
 
 export default function SavingsGoals() {
   const { formatAmount } = useCurrency()
+  const { user } = useAuth()
   const [goals, setGoals] = useState<SavingsGoal[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -31,10 +33,13 @@ export default function SavingsGoals() {
   }, [])
 
   const loadGoals = async () => {
+    if (!user) return
+    
     try {
       const { data, error } = await supabase
         .from('app_savings_goals')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -48,9 +53,11 @@ export default function SavingsGoals() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) return
 
     try {
       const goalData = {
+        user_id: user.id,
         name: formData.name,
         target_amount: parseFloat(formData.target_amount),
         current_amount: parseFloat(formData.current_amount),
