@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { supabase, sessionId } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 export interface AppSettings {
   id?: string
@@ -79,7 +79,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('app_settings')
         .select('*')
-        .eq('session_id', sessionId)
+        .limit(1)
         .maybeSingle()
 
       if (error) throw error
@@ -117,7 +117,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setSettings(data)
         }
       } else {
-        const insertPayload = { ...updatedSettings, session_id: sessionId }
+        const insertPayload = { ...updatedSettings }
         delete (insertPayload as any).id
 
         const { data, error } = await supabase
