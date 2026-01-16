@@ -497,6 +497,5 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
         </div>
       </div>
     </div>
-    </div>
   )
 }
