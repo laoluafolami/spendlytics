@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Trash2, Edit2, Inbox, Search, Filter, X, CreditCard, Repeat, Receipt, Save, Bookmark } from 'lucide-react'
+import { Trash2, Edit2, Inbox, Search, Filter, X, CreditCard, Repeat, Receipt, Save, Bookmark, Calendar } from 'lucide-react'
 import { Expense, EXPENSE_CATEGORIES } from '../types/expense'
 import { format } from 'date-fns'
 import { useCurrency } from '../contexts/CurrencyContext'
@@ -373,126 +373,127 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
 
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl blur-2xl opacity-10"></div>
-        <div className="relative rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-full table-fixed">
-              <thead className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-pink-600/20 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
-                <tr>
-                  <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-24 sm:w-32">
-                    Date
-                  </th>
-                  <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-24 sm:w-32">
-                    Category
-                  </th>
-                  <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-auto">
-                    Description
-                  </th>
-                  {settings.feature_payment_methods && (
-                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-20 sm:w-28">
-                      Payment
+        <div className="relative rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl overflow-hidden">
+          {filteredExpenses.length === 0 ? (
+            <div className="text-center py-12 px-6">
+              <Inbox className="mx-auto mb-4 text-gray-400 dark:text-gray-600" size={48} />
+              <p className="text-gray-600 dark:text-gray-400">No expenses found. {hasActiveFilters ? 'Try adjusting your filters.' : 'Add your first expense!'}</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-pink-600/20 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      Date
                     </th>
-                  )}
-                  <th className="px-3 sm:px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-20 sm:w-28">
-                    Amount
-                  </th>
-                  <th className="px-3 sm:px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-16 sm:w-24">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
-                {filteredExpenses.map((expense) => (
-                <tr
-                  key={expense.id}
-                  className="group hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all duration-200"
-                >
-                  <td className="px-3 sm:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                      <span className="text-xs sm:text-sm whitespace-nowrap">
-                        {format(new Date(expense.date), 'MMM dd, yyyy')}
-                      </span>
-                      {settings.feature_recurring && expense.is_recurring && (
-                        <span title="Recurring expense" className="self-start sm:self-auto">
-                          <Repeat size={14} className="text-blue-500" />
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500/20 to-purple-500/20 dark:from-blue-600/30 dark:to-purple-600/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50 backdrop-blur-sm break-words">
-                      {expense.category}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                    <div className="space-y-1 word-wrap break-words overflow-wrap-anywhere">
-                      <div className="break-words hyphens-auto" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                        {expense.description || '-'}
-                      </div>
-                      {settings.feature_tags && expense.tags && expense.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {expense.tags.map((tag, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300 break-words"
-                              style={{ wordBreak: 'break-word' }}
-                            >
-                              {tag}
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      Category
+                    </th>
+                    {settings.feature_payment_methods && (
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Payment
+                      </th>
+                    )}
+                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
+                  {filteredExpenses.map((expense) => (
+                    <tr key={expense.id} className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        <div className="flex items-center gap-2">
+                          <Calendar size={14} className="text-gray-400" />
+                          {format(new Date(expense.date), 'MMM dd, yyyy')}
+                          {settings.feature_recurring && expense.is_recurring && (
+                            <span title="Recurring expense">
+                              <Repeat size={14} className="text-blue-500" />
                             </span>
-                          ))}
+                          )}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                        <div className="space-y-1">
+                          <div>{expense.description || '-'}</div>
+                          {settings.feature_tags && expense.tags && expense.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {expense.tags.map((tag, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {settings.feature_receipts && expense.receipt_url && (
+                            <a
+                              href={expense.receipt_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                              <Receipt size={12} />
+                              View Receipt
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500/20 to-purple-500/20 dark:from-blue-600/30 dark:to-purple-600/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50">
+                          {expense.category}
+                        </span>
+                      </td>
+                      {settings.feature_payment_methods && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                            <CreditCard size={12} />
+                            {expense.payment_method || 'Cash'}
+                          </span>
+                        </td>
                       )}
-                      {settings.feature_receipts && expense.receipt_url && (
-                        <a
-                          href={expense.receipt_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline break-words"
-                        >
-                          <Receipt size={12} className="flex-shrink-0" />
-                          <span className="break-all">View Receipt</span>
-                        </a>
-                      )}
-                    </div>
-                  </td>
-                  {settings.feature_payment_methods && (
-                    <td className="px-3 sm:px-6 py-4 text-sm">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs break-words">
-                        <CreditCard size={12} className="flex-shrink-0" />
-                        <span className="break-words" style={{ wordBreak: 'break-word' }}>{expense.payment_method || 'Cash'}</span>
-                      </span>
-                    </td>
-                  )}
-                  <td className="px-3 sm:px-6 py-4 text-sm font-bold text-right">
-                    <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent whitespace-nowrap">
-                      {formatAmount(parseFloat(expense.amount.toString()))}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-1 sm:gap-2">
-                      <button
-                        onClick={() => onEdit(expense)}
-                        className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 dark:bg-blue-600/20 dark:hover:bg-blue-600/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transform hover:scale-110 transition-all duration-200"
-                        title="Edit expense"
-                      >
-                        <Edit2 size={14} className="sm:w-4 sm:h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this expense?')) {
-                            onDelete(expense.id)
-                          }
-                        }}
-                        className="p-1.5 sm:p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 dark:bg-red-600/20 dark:hover:bg-red-600/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transform hover:scale-110 transition-all duration-200"
-                        title="Delete expense"
-                      >
-                        <Trash2 size={14} className="sm:w-4 sm:h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
+                        <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                          {formatAmount(parseFloat(expense.amount.toString()))}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => onEdit(expense)}
+                            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all"
+                            title="Edit expense"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this expense?')) {
+                                onDelete(expense.id)
+                              }
+                            }}
+                            className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transform hover:scale-110 transition-all"
+                            title="Delete expense"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>
