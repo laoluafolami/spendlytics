@@ -4,7 +4,8 @@ import { Expense, EXPENSE_CATEGORIES } from '../types/expense'
 import { format } from 'date-fns'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
-import { supabase, sessionId } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 interface ExpenseListProps {
   expenses: Expense[]
@@ -30,6 +31,7 @@ interface FilterPreset {
 export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListProps) {
   const { formatAmount } = useCurrency()
   const { settings } = useSettings()
+  const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('')
@@ -50,10 +52,13 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
   }, [settings.feature_saved_filters])
 
   const loadFilterPresets = async () => {
+    if (!user) return
+    
     try {
       const { data, error } = await supabase
         .from('app_filter_presets')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -64,7 +69,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
   }
 
   const saveFilterPreset = async () => {
-    if (!presetName.trim()) return
+    if (!presetName.trim() || !user) return
 
     try {
       const filters = {
@@ -81,9 +86,9 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
       const { error } = await supabase
         .from('app_filter_presets')
         .insert([{
+          user_id: user.id,
           name: presetName,
-          filters,
-          session_id: sessionId
+          filters
         }])
 
       if (error) throw error
@@ -370,27 +375,27 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl blur-2xl opacity-10"></div>
         <div className="relative rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-full table-fixed">
               <thead className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-pink-600/20 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-24 sm:w-32">
                     Date
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-24 sm:w-32">
                     Category
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-auto">
                     Description
                   </th>
                   {settings.feature_payment_methods && (
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-20 sm:w-28">
                       Payment
                     </th>
                   )}
-                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-20 sm:w-28">
                     Amount
                   </th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-16 sm:w-24">
                     Actions
                   </th>
                 </tr>
@@ -401,30 +406,35 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                   key={expense.id}
                   className="group hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all duration-200"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    <div className="flex items-center gap-2">
-                      {format(new Date(expense.date), 'MMM dd, yyyy')}
+                  <td className="px-3 sm:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      <span className="text-xs sm:text-sm whitespace-nowrap">
+                        {format(new Date(expense.date), 'MMM dd, yyyy')}
+                      </span>
                       {settings.feature_recurring && expense.is_recurring && (
-                        <span title="Recurring expense">
+                        <span title="Recurring expense" className="self-start sm:self-auto">
                           <Repeat size={14} className="text-blue-500" />
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500/20 to-purple-500/20 dark:from-blue-600/30 dark:to-purple-600/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50 backdrop-blur-sm">
+                  <td className="px-3 sm:px-6 py-4">
+                    <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500/20 to-purple-500/20 dark:from-blue-600/30 dark:to-purple-600/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50 backdrop-blur-sm break-words">
                       {expense.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                    <div className="max-w-xs">
-                      <div className="truncate">{expense.description || '-'}</div>
+                  <td className="px-3 sm:px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                    <div className="space-y-1 word-wrap break-words overflow-wrap-anywhere">
+                      <div className="break-words hyphens-auto" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                        {expense.description || '-'}
+                      </div>
                       {settings.feature_tags && expense.tags && expense.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
+                        <div className="flex flex-wrap gap-1">
                           {expense.tags.map((tag, index) => (
                             <span
                               key={index}
-                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300 break-words"
+                              style={{ wordBreak: 'break-word' }}
                             >
                               {tag}
                             </span>
@@ -436,35 +446,35 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                           href={expense.receipt_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline break-words"
                         >
-                          <Receipt size={12} />
-                          View Receipt
+                          <Receipt size={12} className="flex-shrink-0" />
+                          <span className="break-all">View Receipt</span>
                         </a>
                       )}
                     </div>
                   </td>
                   {settings.feature_payment_methods && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
-                        <CreditCard size={12} />
-                        {expense.payment_method || 'Cash'}
+                    <td className="px-3 sm:px-6 py-4 text-sm">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs break-words">
+                        <CreditCard size={12} className="flex-shrink-0" />
+                        <span className="break-words" style={{ wordBreak: 'break-word' }}>{expense.payment_method || 'Cash'}</span>
                       </span>
                     </td>
                   )}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
-                    <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                  <td className="px-3 sm:px-6 py-4 text-sm font-bold text-right">
+                    <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent whitespace-nowrap">
                       {formatAmount(parseFloat(expense.amount.toString()))}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-3 sm:px-6 py-4 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-1 sm:gap-2">
                       <button
                         onClick={() => onEdit(expense)}
-                        className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 dark:bg-blue-600/20 dark:hover:bg-blue-600/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transform hover:scale-110 transition-all duration-200"
+                        className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 dark:bg-blue-600/20 dark:hover:bg-blue-600/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transform hover:scale-110 transition-all duration-200"
                         title="Edit expense"
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={14} className="sm:w-4 sm:h-4" />
                       </button>
                       <button
                         onClick={() => {
@@ -472,10 +482,10 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                             onDelete(expense.id)
                           }
                         }}
-                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 dark:bg-red-600/20 dark:hover:bg-red-600/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transform hover:scale-110 transition-all duration-200"
+                        className="p-1.5 sm:p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 dark:bg-red-600/20 dark:hover:bg-red-600/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transform hover:scale-110 transition-all duration-200"
                         title="Delete expense"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} className="sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   </td>
