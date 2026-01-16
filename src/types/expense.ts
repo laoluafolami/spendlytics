@@ -76,6 +76,9 @@ export const EXPENSE_CATEGORIES = [
   'Travel',
   'Housing',
   'House Repairs',
+  'Recharge Card',
+  'Gift',
+  'Contribution',
   'Other'
 ] as const
 

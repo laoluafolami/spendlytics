@@ -88,21 +88,73 @@ export default function Reports({ expenses }: ReportsProps) {
 
 
   const handleExportReport = () => {
-    const reportData = {
-      period: `${format(new Date(selectedYear, selectedMonth), 'MMMM yyyy')}`,
-      summary: {
-        totalExpenses: monthlyReport.total,
-        numberOfTransactions: monthlyReport.count,
-        averageTransaction: monthlyReport.count > 0 ? monthlyReport.total / monthlyReport.count : 0
-      },
-      byCategory: monthlyReport.categoryData
+    // Create CSV header
+    const csvHeaders = [
+      'Period',
+      'Category',
+      'Amount',
+      'Transaction Count',
+      'Average per Transaction',
+      'Percentage of Total'
+    ]
+
+    // Calculate total for percentage calculations
+    const totalAmount = monthlyReport.total
+
+    // Create CSV rows
+    const csvRows = [
+      csvHeaders.join(','),
+      // Add summary row
+      `"${format(new Date(selectedYear, selectedMonth), 'MMMM yyyy')} - Summary","Total Expenses","${monthlyReport.total}","${monthlyReport.count}","${monthlyReport.count > 0 ? (monthlyReport.total / monthlyReport.count).toFixed(2) : '0'}","100%"`,
+      // Add empty row for separation
+      '',
+      // Add category breakdown header
+      'Category Breakdown:',
+      csvHeaders.join(','),
+      // Add category data
+      ...monthlyReport.categoryData.map(cat => {
+        const percentage = totalAmount > 0 ? ((cat.amount / totalAmount) * 100).toFixed(1) : '0'
+        return [
+          `"${format(new Date(selectedYear, selectedMonth), 'MMMM yyyy')}"`,
+          `"${cat.category}"`,
+          cat.amount.toFixed(2),
+          cat.count,
+          cat.average.toFixed(2),
+          `"${percentage}%"`
+        ].join(',')
+      })
+    ]
+
+    // Add individual transactions if available
+    if (monthlyReport.byCategory && Object.keys(monthlyReport.byCategory).length > 0) {
+      csvRows.push('', 'Individual Transactions:', 'Date,Category,Description,Amount,Payment Method')
+      
+      // Get all expenses for the selected month and add them
+      const monthStart = startOfMonth(new Date(selectedYear, selectedMonth))
+      const monthEnd = endOfMonth(new Date(selectedYear, selectedMonth))
+      
+      const monthExpenses = expenses.filter(exp =>
+        isWithinInterval(new Date(exp.date), { start: monthStart, end: monthEnd })
+      ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+      monthExpenses.forEach(exp => {
+        csvRows.push([
+          `"${format(new Date(exp.date), 'yyyy-MM-dd')}"`,
+          `"${exp.category}"`,
+          `"${(exp.description || '').replace(/"/g, '""')}"`, // Escape quotes in description
+          exp.amount.toString(),
+          `"${exp.payment_method || 'Cash'}"`
+        ].join(','))
+      })
     }
 
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' })
+    // Create and download CSV file
+    const csvContent = csvRows.join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `expense-report-${format(new Date(selectedYear, selectedMonth), 'yyyy-MM')}.json`
+    a.download = `expense-report-${format(new Date(selectedYear, selectedMonth), 'yyyy-MM')}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
