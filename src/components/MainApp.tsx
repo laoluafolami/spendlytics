@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight, LogOut, Scan, FileUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Expense, ExpenseFormData } from '../types/expense'
 import { useTheme } from '../contexts/ThemeContext'
@@ -16,8 +16,10 @@ import BudgetManager from './BudgetManager'
 import SavingsGoals from './SavingsGoals'
 import Reports from './Reports'
 import ImportExport from './ImportExport'
+import SmartCapture from './SmartCapture'
+import BulkImport from './BulkImport'
 
-type View = 'dashboard' | 'list' | 'add' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import'
+type View = 'dashboard' | 'list' | 'add' | 'capture' | 'bulk-import' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import'
 
 export default function MainApp() {
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -182,7 +184,9 @@ export default function MainApp() {
   const menuItems = [
     { view: 'dashboard' as View, icon: BarChart3, label: 'Dashboard', color: 'text-blue-500', bgGradient: 'from-blue-500/10 to-blue-600/10' },
     { view: 'list' as View, icon: List, label: 'All Expenses', color: 'text-emerald-500', bgGradient: 'from-emerald-500/10 to-emerald-600/10' },
-    { view: 'add' as View, icon: Plus, label: 'Add Expense', color: 'text-violet-500', bgGradient: 'from-violet-500/10 to-violet-600/10' },
+    { view: 'capture' as View, icon: Scan, label: 'Smart Capture', color: 'text-rose-500', bgGradient: 'from-rose-500/10 to-pink-600/10' },
+    { view: 'bulk-import' as View, icon: FileUp, label: 'Bank Statement', color: 'text-indigo-500', bgGradient: 'from-indigo-500/10 to-purple-600/10' },
+    { view: 'add' as View, icon: Plus, label: 'Manual Add', color: 'text-violet-500', bgGradient: 'from-violet-500/10 to-violet-600/10' },
     { view: 'analytics' as View, icon: TrendingUp, label: 'Analytics', color: 'text-orange-500', bgGradient: 'from-orange-500/10 to-orange-600/10' },
     ...(settings.feature_income ? [{ view: 'income' as View, icon: DollarSign, label: 'Income', color: 'text-green-500', bgGradient: 'from-green-500/10 to-green-600/10' }] : []),
     ...(settings.feature_budgets ? [{ view: 'budgets' as View, icon: Wallet, label: 'Budgets', color: 'text-amber-500', bgGradient: 'from-amber-500/10 to-amber-600/10' }] : []),
@@ -317,6 +321,50 @@ export default function MainApp() {
                 onDelete={handleDeleteExpense}
                 onEdit={handleEditExpense}
               />
+            )}
+
+            {view === 'capture' && (
+              <div className="max-w-2xl mx-auto">
+                <SmartCapture
+                  onExpenseAdd={async (data) => {
+                    await handleAddExpense({
+                      ...data,
+                      payment_method: 'Cash',
+                      tags: [],
+                      receipt_url: '',
+                      is_recurring: false,
+                      recurrence_frequency: '',
+                      recurrence_end_date: ''
+                    })
+                  }}
+                />
+              </div>
+            )}
+
+            {view === 'bulk-import' && (
+              <div className="max-w-3xl mx-auto">
+                <BulkImport
+                  onImport={async (transactions) => {
+                    // Import all transactions
+                    for (const t of transactions) {
+                      await handleAddExpense({
+                        amount: t.amount,
+                        category: t.category,
+                        description: t.description,
+                        date: t.date,
+                        payment_method: 'Bank Transfer',
+                        tags: [],
+                        receipt_url: '',
+                        is_recurring: false,
+                        recurrence_frequency: '',
+                        recurrence_end_date: ''
+                      })
+                    }
+                    // Switch to list view to see imported transactions
+                    setView('list')
+                  }}
+                />
+              </div>
             )}
 
             {view === 'add' && (
