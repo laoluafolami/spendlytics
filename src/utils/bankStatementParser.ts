@@ -148,72 +148,101 @@ function isIncomeTransaction(text: string): boolean {
 }
 
 function parseNigerianDate(dateStr: string): string | null {
-  // Common Nigerian bank date formats
-  const formats = [
-    // DD-MMM-YY or DD-MMM-YYYY (e.g., 22-Mar-22, 22-Mar-2022)
-    /(\d{1,2})[-\/]([A-Za-z]{3})[-\/](\d{2,4})/,
-    // DD/MM/YY or DD/MM/YYYY
-    /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/,
-    // YYYY-MM-DD
-    /(\d{4})-(\d{2})-(\d{2})/,
-    // DD MMM YYYY (e.g., 22 Mar 2022)
-    /(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/,
-    // MMM DD, YYYY (e.g., Mar 22, 2022)
-    /([A-Za-z]{3})\s+(\d{1,2}),?\s+(\d{4})/
-  ]
-
   const months: Record<string, number> = {
-    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
-    'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+    'jan': 0, 'january': 0,
+    'feb': 1, 'february': 1,
+    'mar': 2, 'march': 2,
+    'apr': 3, 'april': 3,
+    'may': 4,
+    'jun': 5, 'june': 5,
+    'jul': 6, 'july': 6,
+    'aug': 7, 'august': 7,
+    'sep': 8, 'sept': 8, 'september': 8,
+    'oct': 9, 'october': 9,
+    'nov': 10, 'november': 10,
+    'dec': 11, 'december': 11
   }
 
-  for (const pattern of formats) {
-    const match = dateStr.match(pattern)
+  // Try various date formats
+  let day: number | undefined, month: number | undefined, year: number | undefined
+
+  // Format: DD-MM-YY or DD/MM/YY or DD-MM-YYYY or DD/MM/YYYY
+  let match = dateStr.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/)
+  if (match) {
+    day = parseInt(match[1])
+    month = parseInt(match[2]) - 1
+    year = parseInt(match[3])
+  }
+
+  // Format: DD-MMM-YY or DD-MMM-YYYY or DD/MMM/YY (e.g., 22-Mar-22, 01-Oct-2023)
+  if (!day) {
+    match = dateStr.match(/^(\d{1,2})[-\/]([A-Za-z]{3,9})[-\/](\d{2,4})$/i)
     if (match) {
-      try {
-        let day: number, month: number, year: number
-
-        if (pattern.source.includes('[A-Za-z]{3}')) {
-          // Format with month name
-          if (pattern.source.startsWith('\\(\\d{1,2}\\)')) {
-            // DD-MMM-YY format
-            day = parseInt(match[1])
-            month = months[match[2].toLowerCase()]
-            year = parseInt(match[3])
-          } else {
-            // MMM DD, YYYY format
-            month = months[match[1].toLowerCase()]
-            day = parseInt(match[2])
-            year = parseInt(match[3])
-          }
-        } else if (pattern.source.startsWith('\\(\\d{4}\\)')) {
-          // YYYY-MM-DD format
-          year = parseInt(match[1])
-          month = parseInt(match[2]) - 1
-          day = parseInt(match[3])
-        } else {
-          // DD/MM/YY format
-          day = parseInt(match[1])
-          month = parseInt(match[2]) - 1
-          year = parseInt(match[3])
-        }
-
-        // Handle 2-digit years
-        if (year < 100) {
-          year += year < 50 ? 2000 : 1900
-        }
-
-        if (month !== undefined && !isNaN(month) && day && year) {
-          const date = new Date(year, month, day)
-          if (!isNaN(date.getTime())) {
-            return date.toISOString().split('T')[0]
-          }
-        }
-      } catch {
-        continue
-      }
+      day = parseInt(match[1])
+      month = months[match[2].toLowerCase()]
+      year = parseInt(match[3])
     }
   }
+
+  // Format: YYYY-MM-DD (ISO format)
+  if (!day) {
+    match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (match) {
+      year = parseInt(match[1])
+      month = parseInt(match[2]) - 1
+      day = parseInt(match[3])
+    }
+  }
+
+  // Format: DD MMM YYYY or DD MMM, YYYY (e.g., 22 Mar 2022, 1 October 2023)
+  if (!day) {
+    match = dateStr.match(/^(\d{1,2})\s+([A-Za-z]{3,9}),?\s+(\d{4})$/i)
+    if (match) {
+      day = parseInt(match[1])
+      month = months[match[2].toLowerCase()]
+      year = parseInt(match[3])
+    }
+  }
+
+  // Format: MMM DD, YYYY or Month DD, YYYY (e.g., Mar 22, 2022, October 1, 2023)
+  if (!day) {
+    match = dateStr.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})$/i)
+    if (match) {
+      month = months[match[1].toLowerCase()]
+      day = parseInt(match[2])
+      year = parseInt(match[3])
+    }
+  }
+
+  // Format: DDMMYY or DDMMYYYY (compact, e.g., 011023 for Oct 1, 2023)
+  if (!day) {
+    match = dateStr.match(/^(\d{2})(\d{2})(\d{2,4})$/)
+    if (match) {
+      day = parseInt(match[1])
+      month = parseInt(match[2]) - 1
+      year = parseInt(match[3])
+    }
+  }
+
+  // Handle 2-digit years
+  if (year !== undefined && year < 100) {
+    year += year < 50 ? 2000 : 1900
+  }
+
+  // Validate and return
+  if (day !== undefined && month !== undefined && year !== undefined &&
+      !isNaN(day) && !isNaN(month) && !isNaN(year) &&
+      day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900 && year <= 2100) {
+    try {
+      const date = new Date(year, month, day)
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0]
+      }
+    } catch {
+      return null
+    }
+  }
+
   return null
 }
 
@@ -247,10 +276,18 @@ export async function parseBankStatement(
   onProgress?: (status: string, progress: number) => void
 ): Promise<BankStatementResult> {
   try {
+    console.log('=== Starting Bank Statement Parse ===')
+    console.log('File:', file.name, 'Size:', file.size, 'Type:', file.type)
+
     onProgress?.('Loading PDF...', 10)
 
     const arrayBuffer = await file.arrayBuffer()
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    console.log('ArrayBuffer size:', arrayBuffer.byteLength)
+
+    console.log('Loading PDF with pdfjs-dist...')
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+    const pdf = await loadingTask.promise
+    console.log('PDF loaded successfully, pages:', pdf.numPages)
 
     const numPages = pdf.numPages
     const allTextItems: Array<{ text: string; x: number; y: number; page: number; width: number }> = []
@@ -317,11 +354,25 @@ export async function parseBankStatement(
       return row.map(item => item.text).join('\t')
     })
 
-    // Debug: Log first 10 rows
+    // Debug: Log rows to understand structure
     console.log('=== Bank Statement Parser Debug ===')
     console.log('Total rows extracted:', rows.length)
-    console.log('First 10 rows:')
-    lines.slice(0, 10).forEach((line, i) => console.log(`Row ${i + 1}: ${line}`))
+    console.log('First 15 rows (header area):')
+    lines.slice(0, 15).forEach((line, i) => console.log(`Row ${i + 1}: ${line}`))
+    console.log('--- Transaction rows (15-30):')
+    lines.slice(15, 30).forEach((line, i) => console.log(`Row ${i + 16}: ${line}`))
+
+    // Test date parsing on first few potential transaction rows
+    console.log('--- Date parsing tests:')
+    lines.slice(10, 20).forEach((line, i) => {
+      const cols = line.split('\t')
+      cols.forEach((col, j) => {
+        const parsed = parseNigerianDate(col.trim())
+        if (parsed) {
+          console.log(`  Row ${i + 11}, Col ${j + 1}: "${col.trim()}" -> ${parsed}`)
+        }
+      })
+    })
 
     onProgress?.('Identifying transactions...', 70)
 
@@ -497,14 +548,31 @@ export async function parseBankStatement(
     }
 
   } catch (error) {
-    console.error('Bank statement parsing error:', error)
+    console.error('=== Bank Statement Parse Error ===')
+    console.error('Error type:', error?.constructor?.name)
+    console.error('Error message:', error instanceof Error ? error.message : String(error))
+    console.error('Full error:', error)
+
+    let errorMessage = 'Failed to parse bank statement'
+    if (error instanceof Error) {
+      errorMessage = error.message
+      // Common PDF.js errors
+      if (error.message.includes('Invalid PDF')) {
+        errorMessage = 'Invalid PDF file. Please ensure this is a valid PDF document.'
+      } else if (error.message.includes('worker')) {
+        errorMessage = 'PDF worker failed to load. Please refresh the page and try again.'
+      } else if (error.message.includes('password')) {
+        errorMessage = 'This PDF is password protected. Please provide an unprotected PDF.'
+      }
+    }
+
     return {
       transactions: [],
       bankName: null,
       accountNumber: null,
       period: null,
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to parse bank statement'
+      error: errorMessage
     }
   }
 }
