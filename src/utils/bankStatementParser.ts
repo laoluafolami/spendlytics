@@ -224,6 +224,16 @@ function parseNigerianDate(dateStr: string): string | null {
     }
   }
 
+  // Format: DDMmmYYYY or DDMmmYY (no separator, e.g., 29Nov2023, 14Oct23)
+  if (!day) {
+    match = dateStr.match(/^(\d{1,2})([A-Za-z]{3,9})(\d{2,4})$/i)
+    if (match) {
+      day = parseInt(match[1])
+      month = months[match[2].toLowerCase()]
+      year = parseInt(match[3])
+    }
+  }
+
   // Handle 2-digit years
   if (year !== undefined && year < 100) {
     year += year < 50 ? 2000 : 1900
@@ -379,6 +389,11 @@ export async function parseBankStatement(
     // Parse transactions from lines
     const transactions: ParsedTransaction[] = []
 
+    // Debug counters
+    let rowsWithDate = 0
+    let rowsWithAmount = 0
+    let rowsWithBoth = 0
+
     // Try to detect table columns from rows
     // Nigerian bank statements typically have: Date | Description | Debit | Credit | Balance
     for (let i = 0; i < lines.length; i++) {
@@ -397,12 +412,25 @@ export async function parseBankStatement(
         }
       }
 
+      // Log first few rows that have no date for debugging
+      if (!date && i >= 10 && i <= 20) {
+        console.log(`  Row ${i + 1} - No date found. Columns:`, columns.slice(0, 5))
+      }
+
       if (!date) continue
+      rowsWithDate++
 
       // Get all amounts from this row
       const rowText = columns.join(' ')
       const amounts = extractAmounts(rowText)
-      if (amounts.length === 0) continue
+      if (amounts.length === 0) {
+        if (rowsWithDate <= 5) {
+          console.log(`  Row ${i + 1} - Has date ${date} but no amounts. Row: "${line.slice(0, 80)}"`)
+        }
+        continue
+      }
+      rowsWithAmount++
+      rowsWithBoth++
 
       // Try to identify description column (usually after date, before amounts)
       let description = ''
@@ -459,10 +487,17 @@ export async function parseBankStatement(
       }
 
       // Skip likely header rows or footer totals
-      if (description.toLowerCase().includes('total') ||
-          description.toLowerCase().includes('balance') ||
-          description.toLowerCase().includes('opening') ||
-          description.toLowerCase().includes('closing')) {
+      const lowerDesc = description.toLowerCase()
+      if (lowerDesc.includes('total') ||
+          lowerDesc.includes('opening balance') ||
+          lowerDesc.includes('closing balance') ||
+          lowerDesc.includes('period:') ||
+          lowerDesc.includes('trans date') ||
+          lowerDesc.includes('value date') ||
+          lowerDesc.includes('account no') ||
+          lowerDesc.includes('print date') ||
+          lowerDesc.includes('branch name')) {
+        console.log(`  Skipping header/footer row: "${description.slice(0, 50)}"`)
         continue
       }
 
@@ -536,7 +571,11 @@ export async function parseBankStatement(
     // Sort by date
     uniqueTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-    console.log(`=== Parser Result: ${uniqueTransactions.length} transactions found ===`)
+    console.log(`=== Parser Summary ===`)
+    console.log(`Total rows: ${lines.length}`)
+    console.log(`Rows with valid date: ${rowsWithDate}`)
+    console.log(`Rows with date AND amount: ${rowsWithBoth}`)
+    console.log(`Final transactions after filtering: ${uniqueTransactions.length}`)
 
     return {
       transactions: uniqueTransactions,
