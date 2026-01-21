@@ -1,8 +1,10 @@
-import { useState, useRef } from 'react'
-import { Upload, Check, X, Loader2, AlertCircle, Trash2, Edit2, Save, ArrowUpCircle, ArrowDownCircle, CheckSquare, Square } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Upload, Check, X, Loader2, AlertCircle, Trash2, Edit2, Save, ArrowUpCircle, ArrowDownCircle, CheckSquare, Square, Sparkles, Settings } from 'lucide-react'
 import { parseBankStatement, ParsedTransaction, BankStatementResult } from '../utils/bankStatementParser'
+import { parseBankStatementWithAI, getGeminiApiKey, setGeminiApiKey, AITransaction } from '../utils/geminiService'
 import { EXPENSE_CATEGORIES } from '../types/expense'
 import { useCurrency } from '../contexts/CurrencyContext'
+import * as pdfjsLib from 'pdfjs-dist'
 
 interface BulkImportProps {
   onImport: (transactions: Array<{
@@ -28,6 +30,40 @@ export default function BulkImport({ onImport }: BulkImportProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
+  const [useAI, setUseAI] = useState(true)
+  const [hasApiKey, setHasApiKey] = useState(false)
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false)
+  const [apiKeyInput, setApiKeyInput] = useState('')
+
+  useEffect(() => {
+    setHasApiKey(!!getGeminiApiKey())
+  }, [])
+
+  const saveApiKey = () => {
+    if (apiKeyInput.trim()) {
+      setGeminiApiKey(apiKeyInput.trim())
+      setHasApiKey(true)
+      setShowApiKeyInput(false)
+      setApiKeyInput('')
+    }
+  }
+
+  // Extract text from PDF for AI parsing
+  const extractPdfText = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+
+    let fullText = ''
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const textContent = await page.getTextContent()
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ')
+      fullText += pageText + '\n'
+    }
+    return fullText
+  }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -44,19 +80,65 @@ export default function BulkImport({ onImport }: BulkImportProps) {
     setTransactions([])
 
     try {
-      const parseResult = await parseBankStatement(file, (status, percent) => {
-        setProgress({ status, percent })
-      })
+      const apiKey = getGeminiApiKey()
 
-      if (parseResult.success) {
-        setResult(parseResult)
-        setTransactions(parseResult.transactions)
-        // Select all by default
-        setSelectedIds(new Set(parseResult.transactions.map(t => t.id)))
+      // Use AI parsing if enabled and API key available
+      if (useAI && apiKey) {
+        setProgress({ status: 'Extracting text from PDF...', percent: 10 })
+        const pdfText = await extractPdfText(file)
+
+        setProgress({ status: 'AI analyzing transactions...', percent: 30 })
+        const aiTransactions = await parseBankStatementWithAI(
+          pdfText,
+          apiKey,
+          (status) => setProgress({ status, percent: 50 })
+        )
+
+        setProgress({ status: 'Processing results...', percent: 90 })
+
+        // Convert AI transactions to ParsedTransaction format
+        const parsedTransactions: ParsedTransaction[] = aiTransactions.map((t, index) => ({
+          id: `ai-${index}-${Date.now()}`,
+          date: t.date,
+          description: t.description,
+          amount: t.amount,
+          type: t.type,
+          category: t.category,
+          confidence: 90,
+          rawText: `${t.date} | ${t.description} | ${t.amount}`
+        }))
+
+        setProgress({ status: 'Complete', percent: 100 })
+
+        if (parsedTransactions.length > 0) {
+          setResult({
+            transactions: parsedTransactions,
+            bankName: 'AI Parsed',
+            accountNumber: null,
+            period: null,
+            success: true
+          })
+          setTransactions(parsedTransactions)
+          setSelectedIds(new Set(parsedTransactions.map(t => t.id)))
+        } else {
+          setError('AI could not extract any transactions. Try using rule-based parsing.')
+        }
       } else {
-        setError(parseResult.error || 'Failed to parse bank statement')
+        // Fall back to rule-based parsing
+        const parseResult = await parseBankStatement(file, (status, percent) => {
+          setProgress({ status, percent })
+        })
+
+        if (parseResult.success) {
+          setResult(parseResult)
+          setTransactions(parseResult.transactions)
+          setSelectedIds(new Set(parseResult.transactions.map(t => t.id)))
+        } else {
+          setError(parseResult.error || 'Failed to parse bank statement')
+        }
       }
     } catch (err) {
+      console.error('Parse error:', err)
       setError(err instanceof Error ? err.message : 'Failed to process file')
     } finally {
       setIsProcessing(false)
@@ -167,6 +249,89 @@ export default function BulkImport({ onImport }: BulkImportProps) {
             </div>
           )}
 
+          {/* AI Toggle */}
+          <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="text-purple-600 dark:text-purple-400" size={20} />
+                <span className="font-semibold text-purple-700 dark:text-purple-300">AI-Powered Parsing</span>
+                <span className="text-xs bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">Recommended</span>
+              </div>
+              <button
+                onClick={() => setUseAI(!useAI)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  useAI ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                  useAI ? 'left-7' : 'left-1'
+                }`} />
+              </button>
+            </div>
+            <p className="text-xs text-purple-600 dark:text-purple-400">
+              {useAI
+                ? 'Uses Google Gemini AI for intelligent transaction extraction - handles any bank format'
+                : 'Uses rule-based parsing - works best with standard formats'}
+            </p>
+
+            {useAI && !hasApiKey && (
+              <div className="mt-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                  Enter your Gemini API key to enable AI parsing:
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    placeholder="AIza..."
+                    className="flex-1 px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  />
+                  <button
+                    onClick={saveApiKey}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg"
+                  >
+                    Save
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Get your free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-purple-600 dark:text-purple-400 underline">Google AI Studio</a>
+                </p>
+              </div>
+            )}
+
+            {useAI && hasApiKey && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                <Check size={14} />
+                <span>Gemini API key configured</span>
+                <button
+                  onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+                  className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <Settings size={14} />
+                </button>
+              </div>
+            )}
+
+            {showApiKeyInput && hasApiKey && (
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="Enter new API key..."
+                  className="flex-1 px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
+                />
+                <button
+                  onClick={saveApiKey}
+                  className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg"
+                >
+                  Update
+                </button>
+              </div>
+            )}
+          </div>
+
           {isProcessing ? (
             <div className="p-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
               <div className="flex items-center justify-center gap-3 mb-4">
@@ -193,11 +358,22 @@ export default function BulkImport({ onImport }: BulkImportProps) {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white py-12 px-4 rounded-xl font-semibold shadow-lg transition-all flex flex-col items-center justify-center gap-4 border-2 border-dashed border-indigo-300 dark:border-indigo-700"
+                disabled={useAI && !hasApiKey}
+                className={`w-full py-12 px-4 rounded-xl font-semibold shadow-lg transition-all flex flex-col items-center justify-center gap-4 border-2 border-dashed ${
+                  useAI && !hasApiKey
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 border-gray-300 dark:border-gray-600 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white border-indigo-300 dark:border-indigo-700'
+                }`}
               >
-                <Upload size={56} />
-                <span className="text-xl">Upload Bank Statement PDF</span>
-                <span className="text-sm opacity-80">Supports Nigerian banks: GTBank, Access, FirstBank, UBA, Zenith, and more</span>
+                {useAI ? <Sparkles size={56} /> : <Upload size={56} />}
+                <span className="text-xl">
+                  {useAI ? 'Upload for AI Analysis' : 'Upload Bank Statement PDF'}
+                </span>
+                <span className="text-sm opacity-80">
+                  {useAI
+                    ? 'AI will intelligently extract and categorize all transactions'
+                    : 'Supports Nigerian banks: GTBank, Access, FirstBank, UBA, Zenith, and more'}
+                </span>
               </button>
             </>
           )}
@@ -206,10 +382,9 @@ export default function BulkImport({ onImport }: BulkImportProps) {
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">HOW IT WORKS</p>
             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
               <li>1. Upload your bank statement PDF</li>
-              <li>2. We extract all transactions automatically</li>
-              <li>3. AI categorizes each expense/income</li>
-              <li>4. Review and edit categories if needed</li>
-              <li>5. Import selected transactions with one click</li>
+              <li>2. {useAI ? 'AI extracts and categorizes all transactions' : 'Parser extracts transactions from the PDF'}</li>
+              <li>3. Review and edit categories if needed</li>
+              <li>4. Import selected transactions with one click</li>
             </ul>
           </div>
         </div>

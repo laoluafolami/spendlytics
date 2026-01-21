@@ -181,3 +181,125 @@ export function setGeminiApiKey(key: string): void {
 export function clearGeminiApiKey(): void {
   localStorage.removeItem('gemini_api_key')
 }
+
+// AI-powered bank statement parsing
+export interface AITransaction {
+  date: string
+  description: string
+  amount: number
+  type: 'income' | 'expense'
+  category: string
+}
+
+export async function parseBankStatementWithAI(
+  text: string,
+  apiKey: string,
+  onProgress?: (status: string) => void
+): Promise<AITransaction[]> {
+  // Split text into chunks if too long (Gemini can handle ~30k tokens well)
+  const maxChunkSize = 15000 // characters
+  const chunks: string[] = []
+
+  if (text.length <= maxChunkSize) {
+    chunks.push(text)
+  } else {
+    // Split by lines to avoid cutting transactions
+    const lines = text.split('\n')
+    let currentChunk = ''
+
+    for (const line of lines) {
+      if (currentChunk.length + line.length > maxChunkSize) {
+        if (currentChunk) chunks.push(currentChunk)
+        currentChunk = line
+      } else {
+        currentChunk += (currentChunk ? '\n' : '') + line
+      }
+    }
+    if (currentChunk) chunks.push(currentChunk)
+  }
+
+  console.log(`Processing ${chunks.length} chunk(s) with AI...`)
+
+  const allTransactions: AITransaction[] = []
+
+  for (let i = 0; i < chunks.length; i++) {
+    onProgress?.(`AI analyzing chunk ${i + 1} of ${chunks.length}...`)
+
+    const prompt = `You are a bank statement parser. Analyze this bank statement text and extract ALL transactions.
+
+For each transaction, extract:
+- date: in YYYY-MM-DD format
+- description: the transaction description/narration
+- amount: the numeric amount (no currency symbols)
+- type: "expense" for debits/withdrawals, "income" for credits/deposits
+- category: classify into one of these categories:
+  EXPENSES: Food & Dining, Groceries, Transportation, Bills & Utilities, Airtime & Data, Shopping, Healthcare, Bank Charges, Entertainment, Betting & Gambling, Education, Travel, Transfer Out, Cash Withdrawal, Other
+  INCOME: Salary, Freelance, Investment, Business, Transfer In, Refund, Gift, Other Income
+
+Bank Statement Text:
+"""
+${chunks[i]}
+"""
+
+Return ONLY a JSON array of transactions, no other text. Example format:
+[
+  {"date": "2023-10-01", "description": "POS Purchase at Shoprite", "amount": 5000.00, "type": "expense", "category": "Groceries"},
+  {"date": "2023-10-02", "description": "Transfer from John Doe", "amount": 50000.00, "type": "income", "category": "Transfer In"}
+]
+
+If a section doesn't contain transactions (e.g., headers, summaries), return an empty array [].
+Be thorough - extract EVERY transaction you can identify.`
+
+    try {
+      const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 8000
+          }
+        })
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`Gemini API error: ${response.status}`, errorText)
+        throw new Error(`Gemini API error: ${response.status}`)
+      }
+
+      const data: GeminiResponse = await response.json()
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text
+
+      if (!responseText) {
+        console.warn(`Chunk ${i + 1}: No response from Gemini`)
+        continue
+      }
+
+      // Parse JSON array from response
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/)
+      if (jsonMatch) {
+        try {
+          const transactions = JSON.parse(jsonMatch[0]) as AITransaction[]
+          console.log(`Chunk ${i + 1}: Found ${transactions.length} transactions`)
+          allTransactions.push(...transactions)
+        } catch (parseError) {
+          console.warn(`Chunk ${i + 1}: Failed to parse JSON`, parseError)
+        }
+      } else {
+        console.warn(`Chunk ${i + 1}: No JSON array found in response`)
+      }
+    } catch (error) {
+      console.error(`Error processing chunk ${i + 1}:`, error)
+      throw error
+    }
+  }
+
+  console.log(`AI parsing complete: ${allTransactions.length} total transactions found`)
+  return allTransactions
+}
