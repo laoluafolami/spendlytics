@@ -1,8 +1,8 @@
 import { ParsedExpense } from './expenseParser'
 import { EXPENSE_CATEGORIES } from '../types/expense'
 
-// Using gemini-pro for text processing (stable and widely available)
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
+// Using gemini-1.5-flash-002 (stable version)
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent'
 
 interface GeminiResponse {
   candidates: Array<{
