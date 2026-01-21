@@ -1,7 +1,8 @@
 import { ParsedExpense } from './expenseParser'
 import { EXPENSE_CATEGORIES } from '../types/expense'
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+// Using gemini-1.5-flash which has better free tier limits
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent'
 
 interface GeminiResponse {
   candidates: Array<{
@@ -270,6 +271,13 @@ Be thorough - extract EVERY transaction you can identify.`
       if (!response.ok) {
         const errorText = await response.text()
         console.error(`Gemini API error: ${response.status}`, errorText)
+
+        if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please wait a minute and try again, or disable AI parsing to use the rule-based parser.')
+        }
+        if (response.status === 404) {
+          throw new Error('AI model not available. Please try again later or disable AI parsing.')
+        }
         throw new Error(`Gemini API error: ${response.status}`)
       }
 

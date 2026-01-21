@@ -214,23 +214,31 @@ function parseNigerianDate(dateStr: string): string | null {
     }
   }
 
-  // Format: DDMMYY or DDMMYYYY (compact, e.g., 011023 for Oct 1, 2023)
-  if (!day) {
-    match = dateStr.match(/^(\d{2})(\d{2})(\d{2,4})$/)
-    if (match) {
-      day = parseInt(match[1])
-      month = parseInt(match[2]) - 1
-      year = parseInt(match[3])
-    }
-  }
-
   // Format: DDMmmYYYY or DDMmmYY (no separator, e.g., 29Nov2023, 14Oct23)
+  // Check this BEFORE numeric-only formats to prioritize dates with month names
   if (!day) {
     match = dateStr.match(/^(\d{1,2})([A-Za-z]{3,9})(\d{2,4})$/i)
     if (match) {
       day = parseInt(match[1])
       month = months[match[2].toLowerCase()]
       year = parseInt(match[3])
+    }
+  }
+
+  // Format: DDMMYY or DDMMYYYY (compact numeric, e.g., 011023 for Oct 1, 2023)
+  // Only use this as last resort since it can match reference numbers
+  if (!day) {
+    match = dateStr.match(/^(\d{2})(\d{2})(\d{2,4})$/)
+    if (match) {
+      const d = parseInt(match[1])
+      const m = parseInt(match[2]) - 1
+      const y = parseInt(match[3])
+      // Extra validation to avoid matching reference numbers
+      if (d >= 1 && d <= 31 && m >= 0 && m <= 11) {
+        day = d
+        month = m
+        year = y
+      }
     }
   }
 
