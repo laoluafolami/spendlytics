@@ -1,8 +1,8 @@
 import { ParsedExpense } from './expenseParser'
 import { EXPENSE_CATEGORIES } from '../types/expense'
 
-// Using gemini-1.5-flash-002 (stable version)
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent'
+// Using gemini-2.0-flash (works but may hit rate limits on free tier)
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
 
 interface GeminiResponse {
   candidates: Array<{
