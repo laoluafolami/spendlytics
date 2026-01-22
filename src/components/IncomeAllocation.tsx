@@ -10,9 +10,7 @@ import {
   CheckCircle,
   DollarSign,
   Percent,
-  ArrowRight,
   Calendar,
-  Settings,
   Link,
   RefreshCw,
 } from 'lucide-react'

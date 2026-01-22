@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, BarChart3, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight, LogOut, Scan, FileUp, ArrowLeftRight, ArrowDownCircle, PiggyBank, CreditCard, LineChart, Briefcase, PieChart, Menu, X, MoreHorizontal, Home } from 'lucide-react'
+import { Plus, BarChart3, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, LogOut, Scan, FileUp, ArrowLeftRight, ArrowDownCircle, PiggyBank, CreditCard, LineChart, Briefcase, PieChart, Menu, X, MoreHorizontal, Home } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Expense, ExpenseFormData } from '../types/expense'
 import { useTheme } from '../contexts/ThemeContext'
@@ -36,7 +36,6 @@ export default function MainApp() {
   const [view, setView] = useState<View>('dashboard')
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const { settings } = useSettings()
   const { user, signOut } = useAuth()
@@ -55,7 +54,6 @@ export default function MainApp() {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
         setSidebarOpen(true)
-        setMobileMenuOpen(false)
       } else {
         setSidebarOpen(false)
       }
@@ -337,7 +335,6 @@ export default function MainApp() {
     setView(targetView as View)
     if (window.innerWidth < 1024) {
       setSidebarOpen(false)
-      setMobileMenuOpen(false)
     }
   }
 
