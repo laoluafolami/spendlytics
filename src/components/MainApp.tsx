@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Plus, BarChart3, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight, LogOut, Scan, FileUp, ArrowLeftRight, ArrowDownCircle, PiggyBank, CreditCard, LineChart, Briefcase, PieChart } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, BarChart3, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight, LogOut, Scan, FileUp, ArrowLeftRight, ArrowDownCircle, PiggyBank, CreditCard, LineChart, Briefcase, PieChart, Menu, X, MoreHorizontal, Home } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Expense, ExpenseFormData } from '../types/expense'
 import { useTheme } from '../contexts/ThemeContext'
@@ -36,11 +36,16 @@ export default function MainApp() {
   const [view, setView] = useState<View>('dashboard')
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const { settings } = useSettings()
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // Touch handling for swipe gesture
+  const touchStartX = useRef<number>(0)
+  const touchEndX = useRef<number>(0)
 
   // Share handling state
   const [sharedData, setSharedData] = useState<SharedData | null>(null)
@@ -50,6 +55,7 @@ export default function MainApp() {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
         setSidebarOpen(true)
+        setMobileMenuOpen(false)
       } else {
         setSidebarOpen(false)
       }
@@ -59,6 +65,36 @@ export default function MainApp() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Swipe gesture handling for mobile
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      touchEndX.current = e.changedTouches[0].clientX
+      const swipeDistance = touchEndX.current - touchStartX.current
+      const minSwipeDistance = 50
+
+      // Swipe right to open sidebar (only from left edge)
+      if (swipeDistance > minSwipeDistance && touchStartX.current < 50) {
+        setSidebarOpen(true)
+      }
+      // Swipe left to close sidebar
+      if (swipeDistance < -minSwipeDistance && sidebarOpen) {
+        setSidebarOpen(false)
+      }
+    }
+
+    document.addEventListener('touchstart', handleTouchStart)
+    document.addEventListener('touchend', handleTouchEnd)
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [sidebarOpen])
 
   useEffect(() => {
     loadExpenses()
@@ -301,6 +337,7 @@ export default function MainApp() {
     setView(targetView as View)
     if (window.innerWidth < 1024) {
       setSidebarOpen(false)
+      setMobileMenuOpen(false)
     }
   }
 
@@ -356,43 +393,57 @@ export default function MainApp() {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/20 dark:bg-purple-600/10 rounded-full blur-3xl"></div>
       </div>
 
+      {/* Mobile-first Header */}
       <header className="relative z-20 backdrop-blur-md bg-white/30 dark:bg-gray-900/30 border-b border-white/20 dark:border-gray-700/50 safe-top">
-        <div className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+        <div className="px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2 sm:gap-4">
+            {/* Left: Menu button + Logo */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Hamburger menu for mobile */}
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg touch-target"
-                title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+                className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transition-all duration-300 backdrop-blur-sm shadow-lg active:scale-95"
+                aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
               >
-                {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
-              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+              <h1 className="text-base sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
                 WealthPulse
               </h1>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/50 rounded-xl backdrop-blur-sm">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {/* User avatar - visible on all screens */}
+              <div className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/50 rounded-xl backdrop-blur-sm">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
                   {user?.email?.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[150px] truncate">
+                <span className="hidden sm:block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[100px] lg:max-w-[150px] truncate">
                   {user?.email}
                 </span>
               </div>
+
+              {/* Theme toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 sm:p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm touch-target"
-                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                className="p-2 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 transition-all duration-300 backdrop-blur-sm active:scale-95"
+                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
               >
-                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
               </button>
+
+              {/* Sign out - icon only on mobile */}
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg touch-target"
+                className="p-2 sm:px-3 sm:py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl font-medium transition-all duration-300 shadow-lg active:scale-95"
+                aria-label="Sign out"
               >
-                <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
-                <span className="hidden sm:inline text-sm">Sign Out</span>
+                <LogOut size={18} className="sm:hidden" />
+                <span className="hidden sm:flex items-center gap-1.5 text-sm">
+                  <LogOut size={16} />
+                  Sign Out
+                </span>
               </button>
             </div>
           </div>
@@ -400,32 +451,39 @@ export default function MainApp() {
       </header>
 
       <div className="flex">
+        {/* Sidebar overlay for mobile */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/20 dark:bg-black/40 z-30 lg:hidden backdrop-blur-sm"
+            className="fixed inset-0 bg-black/30 dark:bg-black/50 z-30 lg:hidden backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
+        {/* Sidebar - slides in from left on mobile */}
         <aside
-          className={`fixed left-0 top-[73px] h-[calc(100vh-73px)] z-40 backdrop-blur-md bg-gradient-to-b from-white/40 via-white/30 to-white/20 dark:from-gray-900/40 dark:via-gray-900/30 dark:to-gray-900/20 border-r border-white/30 dark:border-gray-700/50 transition-all duration-300 ease-in-out shadow-2xl ${
+          className={`fixed left-0 top-0 h-full z-40 backdrop-blur-xl bg-white/90 dark:bg-gray-900/95 border-r border-white/30 dark:border-gray-700/50 transition-transform duration-300 ease-out shadow-2xl ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:translate-x-0 w-64 lg:w-64`}
+          } lg:translate-x-0 lg:top-[57px] lg:h-[calc(100vh-57px)] w-72 sm:w-72 lg:w-64`}
         >
-          <div className="relative h-full">
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden absolute top-4 right-4 p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/30 dark:border-gray-700/50 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-lg z-20"
-              title="Close sidebar"
-            >
-              <ChevronLeft size={18} />
-            </button>
+          <div className="relative h-full flex flex-col">
+            {/* Mobile sidebar header */}
+            <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-white">Menu</h2>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 active:scale-95 transition-transform"
+                aria-label="Close menu"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-            <nav className="p-4 space-y-4 h-full overflow-y-auto pt-16 lg:pt-4">
+            {/* Navigation */}
+            <nav className="flex-1 p-3 space-y-3 overflow-y-auto overscroll-contain">
               {Object.entries(sections).map(([key, section]) => (
                 section.items.length > 0 && (
                   <div key={key}>
-                    <p className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <p className="px-3 py-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {section.label}
                     </p>
                     <div className="space-y-1 mt-1">
@@ -444,16 +502,16 @@ export default function MainApp() {
                                 setSidebarOpen(false)
                               }
                             }}
-                            className={`group w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
+                            className={`group w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 active:scale-[0.98] ${
                               isActive
-                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
-                                : `bg-gradient-to-br ${item.bgGradient} hover:bg-white/50 dark:hover:bg-gray-800/50 hover:scale-105 border border-transparent hover:border-white/40 dark:hover:border-gray-700/50`
+                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                                : `bg-gradient-to-br ${item.bgGradient} hover:bg-white/80 dark:hover:bg-gray-800/80 border border-transparent hover:border-white/40 dark:hover:border-gray-700/50`
                             }`}
                           >
-                            <div className={`transform transition-all duration-300 group-hover:rotate-12 group-hover:scale-110 ${
+                            <div className={`transition-colors duration-200 ${
                               isActive ? 'text-white' : item.color
                             }`}>
-                              <Icon size={20} strokeWidth={2.5} />
+                              <Icon size={22} strokeWidth={2} />
                             </div>
                             <span className={`whitespace-nowrap font-semibold text-sm ${
                               isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
@@ -472,7 +530,7 @@ export default function MainApp() {
         </aside>
 
         <main
-          className="flex-1 relative z-10 px-3 sm:px-6 lg:px-8 py-6 sm:py-8 transition-all duration-300 lg:ml-64"
+          className="flex-1 relative z-10 px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 lg:pb-8 transition-all duration-300 lg:ml-64"
         >
           <div className="max-w-7xl mx-auto mobile-scroll">
             {view === 'dashboard' && (
@@ -623,6 +681,85 @@ export default function MainApp() {
 
       {/* Data Migration Status Toast */}
       <MigrationStatus />
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-700 safe-bottom">
+        <div className="flex items-center justify-around px-2 py-1">
+          {/* Dashboard */}
+          <button
+            onClick={() => handleNavigate('dashboard')}
+            className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 min-w-[60px] ${
+              view === 'dashboard'
+                ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <Home size={22} strokeWidth={view === 'dashboard' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium mt-0.5">Home</span>
+          </button>
+
+          {/* Transactions */}
+          <button
+            onClick={() => handleNavigate('transactions')}
+            className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 min-w-[60px] ${
+              view === 'transactions'
+                ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <ArrowLeftRight size={22} strokeWidth={view === 'transactions' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium mt-0.5">Transactions</span>
+          </button>
+
+          {/* Add (Center - Prominent) */}
+          <button
+            onClick={() => {
+              setEditingExpense(null)
+              handleNavigate('capture')
+            }}
+            className="flex flex-col items-center justify-center -mt-4"
+          >
+            <div className={`p-3 rounded-full shadow-lg transition-all duration-200 active:scale-95 ${
+              view === 'capture' || view === 'add' || view === 'bulk-import'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600'
+                : 'bg-gradient-to-r from-blue-500 to-purple-500'
+            }`}>
+              <Plus size={26} className="text-white" strokeWidth={2.5} />
+            </div>
+            <span className={`text-[10px] font-medium mt-1 ${
+              view === 'capture' || view === 'add' || view === 'bulk-import'
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}>Add</span>
+          </button>
+
+          {/* Analytics */}
+          <button
+            onClick={() => handleNavigate('analytics')}
+            className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 min-w-[60px] ${
+              view === 'analytics'
+                ? 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <TrendingUp size={22} strokeWidth={view === 'analytics' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium mt-0.5">Analytics</span>
+          </button>
+
+          {/* More (Opens sidebar) */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 min-w-[60px] ${
+              sidebarOpen
+                ? 'text-gray-800 dark:text-white bg-gray-100 dark:bg-gray-800'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <MoreHorizontal size={22} strokeWidth={2} />
+            <span className="text-[10px] font-medium mt-0.5">More</span>
+          </button>
+        </div>
+      </nav>
     </div>
   )
 }
