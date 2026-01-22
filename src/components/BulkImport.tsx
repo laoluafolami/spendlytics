@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Upload, Check, X, Loader2, AlertCircle, Trash2, Edit2, Save, ArrowUpCircle, ArrowDownCircle, CheckSquare, Square, Sparkles, Settings } from 'lucide-react'
 import { parseBankStatement, ParsedTransaction, BankStatementResult } from '../utils/bankStatementParser'
-import { parseBankStatementWithAI, getGeminiApiKey, setGeminiApiKey, AITransaction } from '../utils/geminiService'
+import { parseBankStatementWithAI, getGeminiApiKey, setGeminiApiKey } from '../utils/geminiService'
 import { EXPENSE_CATEGORIES } from '../types/expense'
 import { useCurrency } from '../contexts/CurrencyContext'
 import * as pdfjsLib from 'pdfjs-dist'

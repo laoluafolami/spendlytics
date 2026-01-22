@@ -1,10 +1,86 @@
-import { Settings as SettingsIcon, DollarSign, Check, Target, TrendingUp, CreditCard, Tag, Receipt, Repeat, Filter, Bell, BarChart2, FileText, Upload, Download, Sparkles, Coins } from 'lucide-react'
+import { useState } from 'react'
+import { Settings as SettingsIcon, DollarSign, Check, Target, TrendingUp, CreditCard, Tag, Receipt, Repeat, Filter, Bell, BarChart2, FileText, Upload, Download, Sparkles, Coins, Trash2, AlertTriangle, Loader2, Cloud, CloudOff, RefreshCw, CheckCircle } from 'lucide-react'
 import { useCurrency, CURRENCIES } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 
 export default function Settings() {
-  const { currency, setCurrency } = useCurrency()
+  const { currency, setCurrency, refreshRates, isLoadingRates, lastRateUpdate, autoRefreshEnabled, setAutoRefreshEnabled } = useCurrency()
   const { settings, updateSettings, loading } = useSettings()
+  const { user, migrationStatus, triggerMigration } = useAuth()
+
+  // Data management state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteType, setDeleteType] = useState<'expenses' | 'income' | 'all' | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null)
+
+  // Cloud sync state
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncSuccess, setSyncSuccess] = useState<string | null>(null)
+
+  // Handle manual sync
+  const handleManualSync = async () => {
+    setIsSyncing(true)
+    setSyncSuccess(null)
+    try {
+      const result = await triggerMigration()
+      if (result.success) {
+        setSyncSuccess(result.synced > 0
+          ? `Synced ${result.synced} item(s) to cloud`
+          : 'All data is already synced')
+      } else if (result.errors.length > 0) {
+        setSyncSuccess(`Sync completed with errors: ${result.errors[0]}`)
+      }
+      setTimeout(() => setSyncSuccess(null), 5000)
+    } catch (error) {
+      console.error('Sync error:', error)
+      setSyncSuccess('Sync failed. Please try again.')
+      setTimeout(() => setSyncSuccess(null), 5000)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const handleDeleteData = async (type: 'expenses' | 'income' | 'all') => {
+    if (!user) return
+
+    setDeleting(true)
+    try {
+      if (type === 'expenses' || type === 'all') {
+        const { error } = await supabase
+          .from('expenses')
+          .delete()
+          .eq('user_id', user.id)
+        if (error) throw error
+      }
+
+      if (type === 'income' || type === 'all') {
+        const { error } = await supabase
+          .from('app_income')
+          .delete()
+          .eq('user_id', user.id)
+        if (error) throw error
+      }
+
+      setDeleteSuccess(
+        type === 'all'
+          ? 'All data deleted successfully'
+          : type === 'expenses'
+            ? 'All expenses deleted successfully'
+            : 'All income deleted successfully'
+      )
+      setTimeout(() => setDeleteSuccess(null), 3000)
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete data. Please try again.')
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+      setDeleteType(null)
+    }
+  }
 
   const handleToggle = async (key: keyof typeof settings) => {
     try {
@@ -397,9 +473,230 @@ export default function Settings() {
                 </div>
               </div>
             </div>
+
+            {/* Cloud Sync & Exchange Rates Section */}
+            <div className="pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 mb-4">
+                <Cloud className="text-blue-500" size={20} />
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Cloud Sync & Rates</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Manage data synchronization and exchange rates</p>
+
+              {syncSuccess && (
+                <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <CheckCircle size={18} />
+                  <span>{syncSuccess}</span>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Cloud Sync */}
+                <div className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl border border-white/20 dark:border-gray-700/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {migrationStatus.inProgress || isSyncing ? (
+                        <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                      ) : migrationStatus.error ? (
+                        <CloudOff className="w-5 h-5 text-amber-500" />
+                      ) : (
+                        <Cloud className="w-5 h-5 text-green-500" />
+                      )}
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">Data Sync</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {migrationStatus.inProgress || isSyncing
+                            ? 'Syncing data to cloud...'
+                            : migrationStatus.completed && migrationStatus.result?.success
+                              ? 'All data synced to cloud'
+                              : 'Sync your local data to the cloud'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleManualSync}
+                      disabled={migrationStatus.inProgress || isSyncing}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white rounded-lg transition-colors"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${(migrationStatus.inProgress || isSyncing) ? 'animate-spin' : ''}`} />
+                      Sync Now
+                    </button>
+                  </div>
+                </div>
+
+                {/* Exchange Rates */}
+                <div className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl border border-white/20 dark:border-gray-700/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Coins className="w-5 h-5 text-amber-500" />
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">Exchange Rates</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {lastRateUpdate
+                            ? `Last updated: ${lastRateUpdate.toLocaleString()}`
+                            : 'Auto-update currency exchange rates'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => refreshRates()}
+                      disabled={isLoadingRates}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isLoadingRates ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Auto-refresh rates</span>
+                    <button
+                      onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${
+                        autoRefreshEnabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <div
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                          autoRefreshEnabled ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Data Management Section */}
+            <div className="pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 mb-4">
+                <Trash2 className="text-red-500" size={20} />
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Data Management</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Manage your expense and income data</p>
+
+              {deleteSuccess && (
+                <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <Check size={18} />
+                  <span>{deleteSuccess}</span>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-white/40 dark:bg-gray-700/40 border border-white/30 dark:border-gray-600/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center mt-0.5">
+                        <Trash2 className="text-red-500" size={18} />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">Delete All Expenses</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">Remove all expense records from your account</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setDeleteType('expenses'); setShowDeleteConfirm(true); }}
+                      className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 font-medium transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/40 dark:bg-gray-700/40 border border-white/30 dark:border-gray-600/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center mt-0.5">
+                        <Trash2 className="text-orange-500" size={18} />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">Delete All Income</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">Remove all income records from your account</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setDeleteType('income'); setShowDeleteConfirm(true); }}
+                      className="px-4 py-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 font-medium transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-red-50/50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-700/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-red-600/20 flex items-center justify-center mt-0.5">
+                        <AlertTriangle className="text-red-600" size={18} />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-red-700 dark:text-red-400">Delete All Data</h4>
+                        <p className="text-sm text-red-600/80 dark:text-red-400/80 mt-0.5">Remove ALL expenses and income records permanently</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setDeleteType('all'); setShowDeleteConfirm(true); }}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+                    >
+                      Delete All
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && deleteType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertTriangle className="text-red-600 dark:text-red-400" size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Confirm Deletion</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              {deleteType === 'all'
+                ? 'Are you sure you want to delete ALL your expenses and income records? This will permanently remove all your financial data.'
+                : deleteType === 'expenses'
+                  ? 'Are you sure you want to delete all your expense records? This will permanently remove all tracked expenses.'
+                  : 'Are you sure you want to delete all your income records? This will permanently remove all tracked income.'}
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteType(null); }}
+                disabled={deleting}
+                className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl font-semibold text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteData(deleteType)}
+                disabled={deleting}
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={18} />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

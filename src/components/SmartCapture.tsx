@@ -1,8 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
-import { Camera, Image, Clipboard, Mic, MicOff, Zap, X, Check, Loader2, AlertCircle, ChevronDown, RefreshCw, Sparkles, Settings, Eye, EyeOff } from 'lucide-react'
+import { Camera, Image, Clipboard, Mic, MicOff, Zap, X, Check, Loader2, AlertCircle, ChevronDown, RefreshCw, Sparkles, Settings, Eye, EyeOff, Plus, Trash2, CheckSquare, Square } from 'lucide-react'
 import { performOCR, preprocessImage, OCRProgress } from '../utils/ocrService'
-import { parseExpenseText, parseVoiceInput, parseQuickInput, ParsedExpense } from '../utils/expenseParser'
-import { extractExpenseWithGemini, extractExpenseFromTextWithGemini, getGeminiApiKey, setGeminiApiKey, clearGeminiApiKey } from '../utils/geminiService'
+// Unified parser - consolidates smartParser.ts and expenseParser.ts
+import {
+  parseMultipleTransactions as parseMultipleExpenses,
+  parseQuickTransaction as parseQuickExpense,
+  parseExpenseText,
+  parseVoiceInput,
+  validateCategory,
+  ParsedTransaction as ParsedExpenseItem,
+  MultiParseResult,
+  ParsedExpense
+} from '../utils/transactionParser'
+// AI-specific functions still from geminiService
+import { extractExpenseWithGemini, extractExpenseFromTextWithGemini, extractMultipleExpensesWithGemini, getGeminiApiKey, setGeminiApiKey, clearGeminiApiKey } from '../utils/geminiService'
 import { EXPENSE_CATEGORIES } from '../types/expense'
 import { useCurrency } from '../contexts/CurrencyContext'
 
@@ -15,10 +26,16 @@ interface SmartCaptureProps {
     description: string
     date: string
   }) => Promise<void>
+  onBatchAdd?: (items: Array<{
+    amount: string
+    category: string
+    description: string
+    date: string
+  }>) => Promise<void>
   onCancel?: () => void
 }
 
-export default function SmartCapture({ onExpenseAdd, onCancel }: SmartCaptureProps) {
+export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: SmartCaptureProps) {
   const { currency } = useCurrency()
   const [mode, setMode] = useState<InputMode>('quick')
   const [processing, setProcessing] = useState(false)
@@ -26,6 +43,13 @@ export default function SmartCapture({ onExpenseAdd, onCancel }: SmartCapturePro
   const [error, setError] = useState<string | null>(null)
   const [parsedExpense, setParsedExpense] = useState<ParsedExpense | null>(null)
   const [showReview, setShowReview] = useState(false)
+
+  // Multi-expense state
+  const [multiResult, setMultiResult] = useState<MultiParseResult | null>(null)
+  const [multiItems, setMultiItems] = useState<ParsedExpenseItem[]>([])
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [showMultiReview, setShowMultiReview] = useState(false)
 
   // Form state for review/edit
   const [amount, setAmount] = useState('')
@@ -110,19 +134,141 @@ export default function SmartCapture({ onExpenseAdd, onCancel }: SmartCapturePro
     e.preventDefault()
     if (!quickInput.trim()) return
 
-    const parsed = parseQuickInput(quickInput)
-    setParsedExpense(parsed)
-    populateFormFromParsed(parsed)
-    setShowReview(true)
+    // Try multi-expense parsing first
+    const multiParsed = parseMultipleExpenses(quickInput)
+
+    if (multiParsed.items.length > 1) {
+      // Multiple expenses detected
+      setMultiResult(multiParsed)
+      setMultiItems(multiParsed.items)
+      setSelectedItems(new Set(multiParsed.items.map((_, i) => i)))
+      setShowMultiReview(true)
+    } else if (multiParsed.items.length === 1) {
+      // Single expense from multi-parser
+      const item = multiParsed.items[0]
+      setParsedExpense({
+        amount: item.amount,
+        merchant: item.merchant || null,
+        category: item.category,
+        date: item.date,
+        description: item.description,
+        confidence: item.confidence,
+        rawText: item.rawText
+      })
+      populateFormFromParsed({
+        amount: item.amount,
+        merchant: item.merchant || null,
+        category: item.category,
+        date: item.date,
+        description: item.description,
+        confidence: item.confidence,
+        rawText: item.rawText
+      })
+      setShowReview(true)
+    } else {
+      // Fallback to simple quick parse
+      const quickParsed = parseQuickExpense(quickInput)
+      if (quickParsed) {
+        setParsedExpense({
+          amount: quickParsed.amount,
+          merchant: quickParsed.merchant || null,
+          category: quickParsed.category,
+          date: quickParsed.date,
+          description: quickParsed.description,
+          confidence: quickParsed.confidence,
+          rawText: quickParsed.rawText
+        })
+        populateFormFromParsed({
+          amount: quickParsed.amount,
+          merchant: null,
+          category: quickParsed.category,
+          date: quickParsed.date,
+          description: quickParsed.description,
+          confidence: quickParsed.confidence,
+          rawText: quickParsed.rawText
+        })
+        setShowReview(true)
+      } else {
+        setError('Could not parse expense. Try format: "description amount" (e.g., "lunch 5000")')
+      }
+    }
   }
 
-  const handlePasteSubmit = () => {
+  const handlePasteSubmit = async () => {
     if (!pasteInput.trim()) return
 
-    const parsed = parseExpenseText(pasteInput)
-    setParsedExpense(parsed)
-    populateFormFromParsed(parsed)
-    setShowReview(true)
+    setProcessing(true)
+    setError(null)
+
+    try {
+      // Use multi-expense parser
+      const multiParsed = parseMultipleExpenses(pasteInput)
+
+      if (multiParsed.items.length > 1) {
+        // Multiple expenses detected
+        setMultiResult(multiParsed)
+        setMultiItems(multiParsed.items)
+        setSelectedItems(new Set(multiParsed.items.map((_, i) => i)))
+        setShowMultiReview(true)
+      } else if (multiParsed.items.length === 1) {
+        // Single expense
+        const item = multiParsed.items[0]
+
+        // Try AI enhancement for single items with low confidence
+        if (item.confidence < 70 && useAiFallback) {
+          const apiKey = getGeminiApiKey()
+          if (apiKey) {
+            try {
+              setOcrProgress({ status: 'Enhancing with AI...', progress: 50 })
+              const aiResult = await extractExpenseFromTextWithGemini(pasteInput, apiKey)
+              if (aiResult.confidence > item.confidence) {
+                setParsedExpense(aiResult)
+                populateFormFromParsed(aiResult)
+                setShowReview(true)
+                return
+              }
+            } catch {
+              // Fall through to rule-based result
+            }
+          }
+        }
+
+        setParsedExpense({
+          amount: item.amount,
+          merchant: item.merchant || null,
+          category: item.category,
+          date: item.date,
+          description: item.description,
+          confidence: item.confidence,
+          rawText: item.rawText
+        })
+        populateFormFromParsed({
+          amount: item.amount,
+          merchant: item.merchant || null,
+          category: item.category,
+          date: item.date,
+          description: item.description,
+          confidence: item.confidence,
+          rawText: item.rawText
+        })
+        setShowReview(true)
+      } else {
+        // Fallback to old parser
+        const parsed = parseExpenseText(pasteInput)
+        if (parsed.amount) {
+          setParsedExpense(parsed)
+          populateFormFromParsed(parsed)
+          setShowReview(true)
+        } else {
+          setError('Could not extract expense details. Try pasting a bank SMS or receipt text.')
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse text')
+    } finally {
+      setProcessing(false)
+      setOcrProgress(null)
+    }
   }
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -144,59 +290,107 @@ export default function SmartCapture({ onExpenseAdd, onCancel }: SmartCapturePro
       const base64 = await fileToBase64(file)
       setLastImageBase64(base64)
 
-      // Preprocess image for better OCR
-      const processedFile = await preprocessImage(file)
+      // Try AI multi-expense extraction first if available
+      const apiKey = getGeminiApiKey()
+      if (apiKey && useAiFallback) {
+        setOcrProgress({ status: 'AI analyzing for multiple expenses...', progress: 30 })
+        try {
+          const aiResult = await extractMultipleExpensesWithGemini(base64, apiKey)
 
-      // Perform OCR with Tesseract first
-      const ocrResult = await performOCR(processedFile, setOcrProgress)
-
-      let parsed: ParsedExpense
-
-      if (!ocrResult.success || ocrResult.confidence < 50) {
-        // If Tesseract fails or has low confidence, try Gemini
-        const apiKey = getGeminiApiKey()
-        if (apiKey && useAiFallback) {
-          setOcrProgress({ status: 'Enhancing with AI...', progress: 80 })
-          try {
-            parsed = await extractExpenseWithGemini(base64, apiKey)
-          } catch {
-            // Fall back to Tesseract result if Gemini fails
-            if (ocrResult.success) {
-              parsed = parseExpenseText(ocrResult.text)
-              parsed.confidence = Math.min(parsed.confidence, ocrResult.confidence)
-            } else {
-              throw new Error(ocrResult.error || 'Could not read text from image')
+          if (aiResult.items.length > 1) {
+            // Multiple expenses found - show multi-review
+            const parsedItems: ParsedExpenseItem[] = aiResult.items.map(item => ({
+              amount: item.amount,
+              description: item.description,
+              category: item.category || 'Other',
+              date: item.date || new Date().toISOString().split('T')[0],
+              merchant: item.merchant,
+              confidence: item.confidence,
+              type: item.type,
+              rawText: ''
+            }))
+            setMultiItems(parsedItems)
+            setSelectedItems(new Set(parsedItems.map((_, i) => i)))
+            setMultiResult({
+              items: parsedItems,
+              sourceType: 'receipt',
+              rawText: aiResult.rawText,
+              confidence: parsedItems.reduce((sum, item) => sum + item.confidence, 0) / parsedItems.length,
+              totalAmount: parsedItems.reduce((sum, item) => sum + item.amount, 0)
+            })
+            setShowMultiReview(true)
+            console.log(`AI extracted ${aiResult.items.length} expenses from image`)
+            return
+          } else if (aiResult.items.length === 1) {
+            // Single expense - show single review
+            const item = aiResult.items[0]
+            const parsed: ParsedExpense = {
+              amount: item.amount,
+              merchant: item.merchant || null,
+              category: item.category,
+              date: item.date,
+              description: item.description,
+              confidence: item.confidence,
+              rawText: aiResult.rawText
             }
+            setParsedExpense(parsed)
+            populateFormFromParsed(parsed)
+            setShowReview(true)
+            return
           }
-        } else if (!ocrResult.success) {
-          throw new Error(ocrResult.error || 'Could not read text from image. Try adding a Gemini API key for better results.')
-        } else {
-          parsed = parseExpenseText(ocrResult.text)
-          parsed.confidence = Math.min(parsed.confidence, ocrResult.confidence)
-        }
-      } else {
-        // Parse the extracted text
-        parsed = parseExpenseText(ocrResult.text)
-        parsed.confidence = Math.min(parsed.confidence, ocrResult.confidence)
-
-        // If confidence is still low, try Gemini enhancement
-        const apiKey = getGeminiApiKey()
-        if (parsed.confidence < 60 && apiKey && useAiFallback) {
-          setOcrProgress({ status: 'Enhancing with AI...', progress: 90 })
-          try {
-            const aiParsed = await extractExpenseWithGemini(base64, apiKey)
-            if (aiParsed.confidence > parsed.confidence) {
-              parsed = aiParsed
-            }
-          } catch {
-            // Keep Tesseract result if Gemini fails
-          }
+          // If no items found, fall through to OCR
+        } catch (error) {
+          console.warn('AI multi-extraction failed, falling back to OCR:', error)
         }
       }
 
-      setParsedExpense(parsed)
-      populateFormFromParsed(parsed)
-      setShowReview(true)
+      // Fallback to OCR + smart parser
+      setOcrProgress({ status: 'Running OCR...', progress: 50 })
+      const processedFile = await preprocessImage(file)
+      const ocrResult = await performOCR(processedFile, setOcrProgress)
+
+      if (!ocrResult.success) {
+        throw new Error(ocrResult.error || 'Could not read text from image. Try adding a Gemini API key for better results.')
+      }
+
+      // Try multi-expense parsing from OCR text
+      const multiParsed = parseMultipleExpenses(ocrResult.text)
+
+      if (multiParsed.items.length > 1) {
+        // Multiple expenses found
+        setMultiItems(multiParsed.items)
+        setSelectedItems(new Set(multiParsed.items.map((_, i) => i)))
+        setMultiResult(multiParsed)
+        setShowMultiReview(true)
+        console.log(`OCR extracted ${multiParsed.items.length} expenses from image`)
+      } else if (multiParsed.items.length === 1) {
+        // Single expense
+        const item = multiParsed.items[0]
+        const parsed: ParsedExpense = {
+          amount: item.amount,
+          merchant: item.merchant || null,
+          category: item.category,
+          date: item.date,
+          description: item.description,
+          confidence: Math.min(item.confidence, ocrResult.confidence),
+          rawText: ocrResult.text
+        }
+        setParsedExpense(parsed)
+        populateFormFromParsed(parsed)
+        setShowReview(true)
+      } else {
+        // Fallback to old parser
+        const parsed = parseExpenseText(ocrResult.text)
+        parsed.confidence = Math.min(parsed.confidence, ocrResult.confidence)
+
+        if (parsed.amount) {
+          setParsedExpense(parsed)
+          populateFormFromParsed(parsed)
+          setShowReview(true)
+        } else {
+          throw new Error('Could not extract expense details from image')
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process image')
     } finally {
@@ -293,6 +487,11 @@ export default function SmartCapture({ onExpenseAdd, onCancel }: SmartCapturePro
   const resetCapture = () => {
     setParsedExpense(null)
     setShowReview(false)
+    setShowMultiReview(false)
+    setMultiResult(null)
+    setMultiItems([])
+    setSelectedItems(new Set())
+    setEditingIndex(null)
     setAmount('')
     setCategory('')
     setDescription('')
@@ -300,6 +499,82 @@ export default function SmartCapture({ onExpenseAdd, onCancel }: SmartCapturePro
     setQuickInput('')
     setPasteInput('')
     setError(null)
+    setLastImageBase64(null)
+  }
+
+  // Multi-expense handling functions
+  const toggleItemSelection = (index: number) => {
+    const newSelected = new Set(selectedItems)
+    if (newSelected.has(index)) {
+      newSelected.delete(index)
+    } else {
+      newSelected.add(index)
+    }
+    setSelectedItems(newSelected)
+  }
+
+  const selectAllItems = () => {
+    setSelectedItems(new Set(multiItems.map((_, i) => i)))
+  }
+
+  const deselectAllItems = () => {
+    setSelectedItems(new Set())
+  }
+
+  const updateMultiItem = (index: number, updates: Partial<ParsedExpenseItem>) => {
+    setMultiItems(prev => prev.map((item, i) =>
+      i === index ? { ...item, ...updates } : item
+    ))
+  }
+
+  const deleteMultiItem = (index: number) => {
+    setMultiItems(prev => prev.filter((_, i) => i !== index))
+    const newSelected = new Set(selectedItems)
+    newSelected.delete(index)
+    // Adjust indices for items after deleted one
+    const adjustedSelected = new Set<number>()
+    newSelected.forEach(i => {
+      if (i < index) adjustedSelected.add(i)
+      else if (i > index) adjustedSelected.add(i - 1)
+    })
+    setSelectedItems(adjustedSelected)
+  }
+
+  const handleConfirmMultiExpenses = async () => {
+    const selectedExpenses = multiItems.filter((_, i) => selectedItems.has(i))
+
+    if (selectedExpenses.length === 0) {
+      setError('Please select at least one expense to add')
+      return
+    }
+
+    setProcessing(true)
+    try {
+      if (onBatchAdd && selectedExpenses.length > 1) {
+        // Use batch add if available
+        await onBatchAdd(selectedExpenses.map(item => ({
+          amount: item.amount.toString(),
+          category: validateCategory(item.category, 'expense'),
+          description: item.description,
+          date: item.date
+        })))
+      } else {
+        // Add one by one
+        for (const item of selectedExpenses) {
+          await onExpenseAdd({
+            amount: item.amount.toString(),
+            category: validateCategory(item.category, 'expense'),
+            description: item.description,
+            date: item.date
+          })
+        }
+      }
+      resetCapture()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add expenses')
+    } finally {
+      setProcessing(false)
+    }
   }
 
   const inputModes = [
@@ -388,6 +663,195 @@ export default function SmartCapture({ onExpenseAdd, onCancel }: SmartCapturePro
               className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-3 px-4 rounded-xl font-semibold shadow-lg"
             >
               Save Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Multi-expense review screen
+  if (showMultiReview && multiItems.length > 0) {
+    const totalAmount = multiItems
+      .filter((_, i) => selectedItems.has(i))
+      .reduce((sum, item) => sum + item.amount, 0)
+
+    return (
+      <div className="group relative animate-fade-in">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 rounded-3xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
+        <div className="relative p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 dark:from-purple-400 dark:via-pink-400 dark:to-orange-400 bg-clip-text text-transparent">
+                {multiItems.length} Expenses Found
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {multiResult?.sourceType === 'whatsapp_list' ? 'WhatsApp List' :
+                 multiResult?.sourceType === 'multi_item_receipt' ? 'Receipt Items' :
+                 'Multiple Items'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                multiResult && multiResult.confidence >= 70
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+              }`}>
+                {multiResult?.confidence.toFixed(0)}%
+              </span>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2 text-red-700 dark:text-red-400">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="ml-auto"><X size={16} /></button>
+            </div>
+          )}
+
+          {/* Summary */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Selected</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedItems.size} of {multiItems.length}</p>
+            </div>
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+              <p className="text-xs text-purple-600 dark:text-purple-400">Total</p>
+              <p className="text-lg font-bold text-purple-700 dark:text-purple-300">{currency.symbol}{totalAmount.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Selection controls */}
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              onClick={selectAllItems}
+              className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50"
+            >
+              Select All
+            </button>
+            <button
+              onClick={deselectAllItems}
+              className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              Deselect All
+            </button>
+          </div>
+
+          {/* Items list */}
+          <div className="max-h-80 overflow-y-auto space-y-2 mb-4">
+            {multiItems.map((item, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-xl border transition-all ${
+                  selectedItems.has(index)
+                    ? 'bg-white/80 dark:bg-gray-700/80 border-purple-300 dark:border-purple-700'
+                    : 'bg-white/40 dark:bg-gray-700/40 border-gray-200 dark:border-gray-600 opacity-60'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <button
+                    onClick={() => toggleItemSelection(index)}
+                    className="mt-1 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"
+                  >
+                    {selectedItems.has(index)
+                      ? <CheckSquare size={20} className="text-purple-600 dark:text-purple-400" />
+                      : <Square size={20} />
+                    }
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    {editingIndex === index ? (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => updateMultiItem(index, { description: e.target.value })}
+                          className="w-full px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded"
+                          placeholder="Description"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={item.amount}
+                            onChange={(e) => updateMultiItem(index, { amount: parseFloat(e.target.value) || 0 })}
+                            className="w-24 px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded"
+                            placeholder="Amount"
+                          />
+                          <select
+                            value={item.category}
+                            onChange={(e) => updateMultiItem(index, { category: e.target.value })}
+                            className="flex-1 px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded"
+                          >
+                            {EXPENSE_CATEGORIES.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => setEditingIndex(null)}
+                            className="px-2 py-1 bg-purple-600 text-white rounded text-sm"
+                          >
+                            <Check size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {item.description}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{item.category}</p>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900 dark:text-white">
+                      {currency.symbol}{item.amount.toLocaleString()}
+                    </p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <button
+                        onClick={() => setEditingIndex(editingIndex === index ? null : index)}
+                        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                        title="Edit"
+                      >
+                        <Plus size={14} className="rotate-45" />
+                      </button>
+                      <button
+                        onClick={() => deleteMultiItem(index)}
+                        className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={resetCapture}
+              className="flex-1 px-4 py-3 bg-white/50 dark:bg-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl font-semibold text-gray-700 dark:text-gray-300 transition-all flex items-center justify-center gap-2"
+            >
+              <RefreshCw size={18} />
+              Start Over
+            </button>
+            <button
+              onClick={handleConfirmMultiExpenses}
+              disabled={processing || selectedItems.size === 0}
+              className="flex-1 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white py-3 px-4 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {processing ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Check size={18} />
+              )}
+              {processing ? 'Adding...' : `Add ${selectedItems.size} Expense${selectedItems.size !== 1 ? 's' : ''}`}
             </button>
           </div>
         </div>
@@ -630,14 +1094,14 @@ export default function SmartCapture({ onExpenseAdd, onCancel }: SmartCapturePro
           <form onSubmit={handleQuickSubmit} className="space-y-4">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Type something like "uber 12.50" or "lunch 25 starbucks"
+                Single: "uber 5000" | Multiple: "Food 60k, Fuel 40k, Airtime 5k"
               </p>
               <input
                 type="text"
                 value={quickInput}
                 onChange={(e) => setQuickInput(e.target.value)}
                 className="w-full px-4 py-4 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-lg"
-                placeholder="groceries 150..."
+                placeholder="Food 60k, Fuel 40k..."
                 autoFocus
               />
             </div>
@@ -713,10 +1177,12 @@ export default function SmartCapture({ onExpenseAdd, onCancel }: SmartCapturePro
               onChange={(e) => setPasteInput(e.target.value)}
               className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-gray-900 dark:text-white resize-none"
               rows={6}
-              placeholder="Paste your transaction message here...
+              placeholder="Paste expense list or receipt text here...
 
-Example:
-NGN 5,000.00 was debited from your account for POS purchase at SHOPRITE..."
+Examples:
+• Food 60k, Fuel 40k, Airtime 5k
+• NGN 5,000.00 was debited from your account...
+• OPay/GTBank/Moniepoint receipt text"
               autoFocus
             />
             <button
@@ -767,23 +1233,23 @@ NGN 5,000.00 was debited from your account for POS purchase at SHOPRITE..."
           <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
             {mode === 'quick' && (
               <>
-                <li>• Start with merchant/description, end with amount</li>
-                <li>• "uber 12.50" → Uber, Transportation, ₦12.50</li>
-                <li>• "shoprite groceries 15000" → Shoprite, Groceries, ₦15,000</li>
+                <li>• Single: "uber 12.50" or "lunch 5000"</li>
+                <li>• Multiple: "Food 60k, Fuel 40k, Airtime 5k"</li>
+                <li>• Use "k" for thousands: 60k = ₦60,000</li>
               </>
             )}
             {(mode === 'camera' || mode === 'image') && (
               <>
-                <li>• Ensure good lighting and clear text</li>
-                <li>• Works with receipts, bank notifications, payment confirmations</li>
-                <li>• Crop to the relevant part for better accuracy</li>
+                <li>• Works with OPay, GTBank, Moniepoint receipts</li>
+                <li>• Supermarket receipts extract each item</li>
+                <li>• Screenshot bank app notifications</li>
               </>
             )}
             {mode === 'paste' && (
               <>
-                <li>• Works with Nigerian bank SMS (GTBank, Access, FirstBank, etc.)</li>
-                <li>• Also works with email notifications and payment confirmations</li>
-                <li>• The more text you paste, the better the extraction</li>
+                <li>• Paste WhatsApp lists: "Food 60k, Fuel 40k"</li>
+                <li>• Bank SMS from GTBank, Access, FirstBank, etc.</li>
+                <li>• OPay, Moniepoint receipts auto-detected</li>
               </>
             )}
             {mode === 'voice' && (
