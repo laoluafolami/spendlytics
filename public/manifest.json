@@ -1,13 +1,29 @@
 {
-  "name": "Expense Tracker - Smart Budget Manager",
-  "short_name": "ExpenseTracker",
-  "description": "Track your expenses, manage budgets, set savings goals, and gain insights into your spending habits with beautiful analytics",
+  "name": "WealthPulse - Smart Finance Tracker",
+  "short_name": "WealthPulse",
+  "description": "Track your finances, manage budgets, set savings goals, and gain insights into your spending habits with beautiful analytics",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3B82F6",
   "orientation": "any",
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "media",
+          "accept": ["image/*", "application/pdf"]
+        }
+      ]
+    }
+  },
   "icons": [
     {
       "src": "/icon-192.svg",

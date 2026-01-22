@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Plus, BarChart3, List, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight, LogOut, Scan, FileUp } from 'lucide-react'
+import { Plus, BarChart3, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, ChevronLeft, ChevronRight, LogOut, Scan, FileUp, ArrowLeftRight, ArrowDownCircle, PiggyBank, CreditCard, LineChart, Briefcase, PieChart } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Expense, ExpenseFormData } from '../types/expense'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSettings } from '../contexts/SettingsContext'
 import { useAuth } from '../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import ExpenseForm from './ExpenseForm'
 import ExpenseList from './ExpenseList'
-import Dashboard from './Dashboard'
+import FinancialDashboard from './FinancialDashboard'
+import AllTransactions from './AllTransactions'
 import Analytics from './Analytics'
 import Settings from './Settings'
 import IncomeManager from './IncomeManager'
@@ -18,8 +19,16 @@ import Reports from './Reports'
 import ImportExport from './ImportExport'
 import SmartCapture from './SmartCapture'
 import BulkImport from './BulkImport'
+import SharePreview from './SharePreview'
+import AssetsManager from './AssetsManager'
+import LiabilitiesManager from './LiabilitiesManager'
+import NetWorth from './NetWorth'
+import InvestmentsManager from './InvestmentsManager'
+import IncomeAllocation from './IncomeAllocation'
+import MigrationStatus from './MigrationStatus'
+import { SharedData, getSharedData, clearSharedData } from '../utils/shareService'
 
-type View = 'dashboard' | 'list' | 'add' | 'capture' | 'bulk-import' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import'
+type View = 'dashboard' | 'transactions' | 'expenses' | 'add' | 'capture' | 'bulk-import' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import' | 'assets' | 'liabilities' | 'net-worth' | 'investments' | 'allocation'
 
 export default function MainApp() {
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -31,6 +40,11 @@ export default function MainApp() {
   const { settings } = useSettings()
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Share handling state
+  const [sharedData, setSharedData] = useState<SharedData | null>(null)
+  const [showSharePreview, setShowSharePreview] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
@@ -49,6 +63,96 @@ export default function MainApp() {
   useEffect(() => {
     loadExpenses()
   }, [user])
+
+  // Check for shared content when app loads
+  useEffect(() => {
+    const checkForSharedContent = async () => {
+      // Check if we were opened via share
+      const isShared = searchParams.get('shared') === 'true'
+      const hasShareError = searchParams.get('share_error') === 'true'
+
+      if (hasShareError) {
+        console.error('Share error occurred')
+        // Clear the error param
+        setSearchParams({})
+        return
+      }
+
+      if (isShared) {
+        try {
+          const data = await getSharedData()
+          if (data && (data.text || data.files.length > 0)) {
+            setSharedData(data)
+            setShowSharePreview(true)
+          }
+        } catch (error) {
+          console.error('Failed to get shared data:', error)
+        }
+        // Clear the shared param
+        setSearchParams({})
+      }
+    }
+
+    checkForSharedContent()
+  }, [searchParams, setSearchParams])
+
+  // Handle share preview close
+  const handleSharePreviewClose = async () => {
+    setShowSharePreview(false)
+    setSharedData(null)
+    await clearSharedData()
+  }
+
+  // Handle shared items confirm
+  const handleSharedItemsConfirm = async (items: Array<{
+    amount: string
+    category: string
+    description: string
+    date: string
+    type: 'expense' | 'income'
+  }>) => {
+    let expenseCount = 0
+    let incomeCount = 0
+
+    for (const item of items) {
+      if (item.type === 'income') {
+        await handleAddIncome({
+          amount: item.amount,
+          category: item.category,
+          description: item.description,
+          date: item.date,
+        })
+        incomeCount++
+      } else {
+        await handleAddExpense({
+          amount: item.amount,
+          category: item.category,
+          description: item.description,
+          date: item.date,
+          payment_method: 'Cash',
+          tags: [],
+          receipt_url: '',
+          is_recurring: false,
+          recurrence_frequency: '',
+          recurrence_end_date: ''
+        })
+        expenseCount++
+      }
+    }
+
+    console.log(`Shared items: Added ${expenseCount} expenses and ${incomeCount} income`)
+
+    setShowSharePreview(false)
+    setSharedData(null)
+    await loadExpenses()
+
+    // Navigate to appropriate view
+    if (incomeCount > 0 && expenseCount === 0) {
+      setView('income')
+    } else {
+      setView('transactions')
+    }
+  }
 
   const loadExpenses = async () => {
     if (!user) {
@@ -94,10 +198,32 @@ export default function MainApp() {
 
       if (error) throw error
       await loadExpenses()
-      setView('list')
+      setView('expenses')
     } catch (error) {
       console.error('Error adding expense:', error)
       alert('Failed to add expense. Please try again.')
+    }
+  }
+
+  // Add income to the app_income table
+  const handleAddIncome = async (data: { amount: string; category: string; description: string; date: string }) => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from('app_income')
+        .insert([{
+          user_id: user.id,
+          amount: parseFloat(data.amount),
+          category: data.category,
+          description: data.description,
+          date: data.date,
+        }])
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error adding income:', error)
+      throw error
     }
   }
 
@@ -126,7 +252,7 @@ export default function MainApp() {
       if (error) throw error
       await loadExpenses()
       setEditingExpense(null)
-      setView('list')
+      setView('expenses')
     } catch (error) {
       console.error('Error updating expense:', error)
       alert('Failed to update expense. Please try again.')
@@ -158,7 +284,7 @@ export default function MainApp() {
 
   const handleCancelEdit = () => {
     setEditingExpense(null)
-    setView('list')
+    setView('expenses')
   }
 
   const handleSignOut = async () => {
@@ -170,31 +296,58 @@ export default function MainApp() {
     }
   }
 
+  // Navigation handler for dashboard clicks
+  const handleNavigate = (targetView: string) => {
+    setView(targetView as View)
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-950 transition-colors duration-500 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto"></div>
-          <p className="mt-6 text-gray-600 dark:text-gray-400 font-medium">Loading expenses...</p>
+          <p className="mt-6 text-gray-600 dark:text-gray-400 font-medium">Loading your finances...</p>
         </div>
       </div>
     )
   }
 
+  // Reorganized menu structure - Income Statement / Balance Sheet focused
   const menuItems = [
-    { view: 'dashboard' as View, icon: BarChart3, label: 'Dashboard', color: 'text-blue-500', bgGradient: 'from-blue-500/10 to-blue-600/10' },
-    { view: 'list' as View, icon: List, label: 'All Expenses', color: 'text-emerald-500', bgGradient: 'from-emerald-500/10 to-emerald-600/10' },
-    { view: 'capture' as View, icon: Scan, label: 'Smart Capture', color: 'text-rose-500', bgGradient: 'from-rose-500/10 to-pink-600/10' },
-    { view: 'bulk-import' as View, icon: FileUp, label: 'Bank Statement', color: 'text-indigo-500', bgGradient: 'from-indigo-500/10 to-purple-600/10' },
-    { view: 'add' as View, icon: Plus, label: 'Manual Add', color: 'text-violet-500', bgGradient: 'from-violet-500/10 to-violet-600/10' },
-    { view: 'analytics' as View, icon: TrendingUp, label: 'Analytics', color: 'text-orange-500', bgGradient: 'from-orange-500/10 to-orange-600/10' },
-    ...(settings.feature_income ? [{ view: 'income' as View, icon: DollarSign, label: 'Income', color: 'text-green-500', bgGradient: 'from-green-500/10 to-green-600/10' }] : []),
-    ...(settings.feature_budgets ? [{ view: 'budgets' as View, icon: Wallet, label: 'Budgets', color: 'text-amber-500', bgGradient: 'from-amber-500/10 to-amber-600/10' }] : []),
-    ...(settings.feature_savings_goals ? [{ view: 'savings' as View, icon: Target, label: 'Savings', color: 'text-pink-500', bgGradient: 'from-pink-500/10 to-pink-600/10' }] : []),
-    ...(settings.feature_reports ? [{ view: 'reports' as View, icon: FileText, label: 'Reports', color: 'text-cyan-500', bgGradient: 'from-cyan-500/10 to-cyan-600/10' }] : []),
-    ...((settings.feature_import_csv || settings.feature_export_excel) ? [{ view: 'import' as View, icon: Upload, label: 'Import/Export', color: 'text-teal-500', bgGradient: 'from-teal-500/10 to-teal-600/10' }] : []),
-    { view: 'settings' as View, icon: SettingsIcon, label: 'Settings', color: 'text-gray-500', bgGradient: 'from-gray-500/10 to-gray-600/10' },
+    { view: 'dashboard' as View, icon: BarChart3, label: 'Dashboard', color: 'text-blue-500', bgGradient: 'from-blue-500/10 to-blue-600/10', section: 'main' },
+    { view: 'transactions' as View, icon: ArrowLeftRight, label: 'All Transactions', color: 'text-purple-500', bgGradient: 'from-purple-500/10 to-purple-600/10', section: 'main' },
+    { view: 'expenses' as View, icon: ArrowDownCircle, label: 'Expenses', color: 'text-red-500', bgGradient: 'from-red-500/10 to-red-600/10', section: 'main' },
+    ...(settings.feature_income ? [{ view: 'income' as View, icon: DollarSign, label: 'Income', color: 'text-green-500', bgGradient: 'from-green-500/10 to-green-600/10', section: 'main' }] : []),
+    { view: 'allocation' as View, icon: PieChart, label: 'Income Allocation', color: 'text-cyan-500', bgGradient: 'from-cyan-500/10 to-cyan-600/10', section: 'main' },
+    // Balance Sheet / Net Worth section
+    { view: 'net-worth' as View, icon: LineChart, label: 'Net Worth', color: 'text-emerald-500', bgGradient: 'from-emerald-500/10 to-emerald-600/10', section: 'balance' },
+    { view: 'assets' as View, icon: PiggyBank, label: 'Assets', color: 'text-green-500', bgGradient: 'from-green-500/10 to-green-600/10', section: 'balance' },
+    { view: 'liabilities' as View, icon: CreditCard, label: 'Liabilities', color: 'text-red-500', bgGradient: 'from-red-500/10 to-red-600/10', section: 'balance' },
+    { view: 'investments' as View, icon: Briefcase, label: 'Investments', color: 'text-blue-500', bgGradient: 'from-blue-500/10 to-blue-600/10', section: 'balance' },
+    // Data entry
+    { view: 'capture' as View, icon: Scan, label: 'Smart Capture', color: 'text-rose-500', bgGradient: 'from-rose-500/10 to-pink-600/10', section: 'capture' },
+    { view: 'bulk-import' as View, icon: FileUp, label: 'Bank Statement', color: 'text-indigo-500', bgGradient: 'from-indigo-500/10 to-purple-600/10', section: 'capture' },
+    { view: 'add' as View, icon: Plus, label: 'Manual Entry', color: 'text-violet-500', bgGradient: 'from-violet-500/10 to-violet-600/10', section: 'capture' },
+    { view: 'analytics' as View, icon: TrendingUp, label: 'Analytics', color: 'text-orange-500', bgGradient: 'from-orange-500/10 to-orange-600/10', section: 'insights' },
+    ...(settings.feature_budgets ? [{ view: 'budgets' as View, icon: Wallet, label: 'Budgets', color: 'text-amber-500', bgGradient: 'from-amber-500/10 to-amber-600/10', section: 'planning' }] : []),
+    ...(settings.feature_savings_goals ? [{ view: 'savings' as View, icon: Target, label: 'Savings Goals', color: 'text-teal-500', bgGradient: 'from-teal-500/10 to-teal-600/10', section: 'planning' }] : []),
+    ...(settings.feature_reports ? [{ view: 'reports' as View, icon: FileText, label: 'Reports', color: 'text-cyan-500', bgGradient: 'from-cyan-500/10 to-cyan-600/10', section: 'insights' }] : []),
+    ...((settings.feature_import_csv || settings.feature_export_excel) ? [{ view: 'import' as View, icon: Upload, label: 'Import/Export', color: 'text-gray-500', bgGradient: 'from-gray-500/10 to-gray-600/10', section: 'tools' }] : []),
+    { view: 'settings' as View, icon: SettingsIcon, label: 'Settings', color: 'text-gray-500', bgGradient: 'from-gray-500/10 to-gray-600/10', section: 'tools' },
   ]
+
+  // Group menu items by section
+  const sections = {
+    main: { label: 'Income Statement', items: menuItems.filter(i => i.section === 'main') },
+    balance: { label: 'Balance Sheet', items: menuItems.filter(i => i.section === 'balance') },
+    capture: { label: 'Add Data', items: menuItems.filter(i => i.section === 'capture') },
+    planning: { label: 'Planning', items: menuItems.filter(i => i.section === 'planning') },
+    insights: { label: 'Insights', items: menuItems.filter(i => i.section === 'insights') },
+    tools: { label: 'Tools', items: menuItems.filter(i => i.section === 'tools') },
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-950 transition-colors duration-500">
@@ -215,7 +368,7 @@ export default function MainApp() {
                 {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
               </button>
               <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-                Expense Tracker
+                WealthPulse
               </h1>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -268,43 +421,52 @@ export default function MainApp() {
               <ChevronLeft size={18} />
             </button>
 
-            <nav className="p-4 space-y-2 h-full overflow-y-auto pt-16 lg:pt-4">
-              {menuItems.map((item) => {
-                const Icon = item.icon
-                const isActive = view === item.view
-                const button = (
-                  <button
-                    key={item.view}
-                    onClick={() => {
-                      if (item.view === 'add') {
-                        setEditingExpense(null)
-                      }
-                      setView(item.view)
-                      if (window.innerWidth < 1024) {
-                        setSidebarOpen(false)
-                      }
-                    }}
-                    className={`group w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
-                        : `bg-gradient-to-br ${item.bgGradient} hover:bg-white/50 dark:hover:bg-gray-800/50 hover:scale-105 border border-transparent hover:border-white/40 dark:hover:border-gray-700/50`
-                    }`}
-                  >
-                    <div className={`transform transition-all duration-300 group-hover:rotate-12 group-hover:scale-110 ${
-                      isActive ? 'text-white' : item.color
-                    }`}>
-                      <Icon size={22} strokeWidth={2.5} />
+            <nav className="p-4 space-y-4 h-full overflow-y-auto pt-16 lg:pt-4">
+              {Object.entries(sections).map(([key, section]) => (
+                section.items.length > 0 && (
+                  <div key={key}>
+                    <p className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {section.label}
+                    </p>
+                    <div className="space-y-1 mt-1">
+                      {section.items.map((item) => {
+                        const Icon = item.icon
+                        const isActive = view === item.view
+                        return (
+                          <button
+                            key={item.view}
+                            onClick={() => {
+                              if (item.view === 'add') {
+                                setEditingExpense(null)
+                              }
+                              setView(item.view)
+                              if (window.innerWidth < 1024) {
+                                setSidebarOpen(false)
+                              }
+                            }}
+                            className={`group w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
+                              isActive
+                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
+                                : `bg-gradient-to-br ${item.bgGradient} hover:bg-white/50 dark:hover:bg-gray-800/50 hover:scale-105 border border-transparent hover:border-white/40 dark:hover:border-gray-700/50`
+                            }`}
+                          >
+                            <div className={`transform transition-all duration-300 group-hover:rotate-12 group-hover:scale-110 ${
+                              isActive ? 'text-white' : item.color
+                            }`}>
+                              <Icon size={20} strokeWidth={2.5} />
+                            </div>
+                            <span className={`whitespace-nowrap font-semibold text-sm ${
+                              isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                            }`}>
+                              {item.label}
+                            </span>
+                          </button>
+                        )
+                      })}
                     </div>
-                    <span className={`whitespace-nowrap font-semibold ${
-                      isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                    }`}>
-                      {item.label}
-                    </span>
-                  </button>
+                  </div>
                 )
-
-                return button
-              })}
+              ))}
             </nav>
           </div>
         </aside>
@@ -313,9 +475,18 @@ export default function MainApp() {
           className="flex-1 relative z-10 px-3 sm:px-6 lg:px-8 py-6 sm:py-8 transition-all duration-300 lg:ml-64"
         >
           <div className="max-w-7xl mx-auto mobile-scroll">
-            {view === 'dashboard' && <Dashboard expenses={expenses} />}
+            {view === 'dashboard' && (
+              <FinancialDashboard
+                expenses={expenses}
+                onNavigate={handleNavigate}
+              />
+            )}
 
-            {view === 'list' && (
+            {view === 'transactions' && (
+              <AllTransactions onNavigate={handleNavigate} />
+            )}
+
+            {view === 'expenses' && (
               <ExpenseList
                 expenses={expenses}
                 onDelete={handleDeleteExpense}
@@ -345,23 +516,49 @@ export default function MainApp() {
               <div className="max-w-3xl mx-auto">
                 <BulkImport
                   onImport={async (transactions) => {
-                    // Import all transactions
+                    // Import transactions based on type (income vs expense)
+                    let expenseCount = 0
+                    let incomeCount = 0
+
                     for (const t of transactions) {
-                      await handleAddExpense({
-                        amount: t.amount,
-                        category: t.category,
-                        description: t.description,
-                        date: t.date,
-                        payment_method: 'Bank Transfer',
-                        tags: [],
-                        receipt_url: '',
-                        is_recurring: false,
-                        recurrence_frequency: '',
-                        recurrence_end_date: ''
-                      })
+                      if (t.type === 'income') {
+                        // Add to income table
+                        await handleAddIncome({
+                          amount: t.amount,
+                          category: t.category,
+                          description: t.description,
+                          date: t.date,
+                        })
+                        incomeCount++
+                      } else {
+                        // Add to expenses table
+                        await handleAddExpense({
+                          amount: t.amount,
+                          category: t.category,
+                          description: t.description,
+                          date: t.date,
+                          payment_method: 'Bank Transfer',
+                          tags: [],
+                          receipt_url: '',
+                          is_recurring: false,
+                          recurrence_frequency: '',
+                          recurrence_end_date: ''
+                        })
+                        expenseCount++
+                      }
                     }
-                    // Switch to list view to see imported transactions
-                    setView('list')
+
+                    console.log(`Imported ${expenseCount} expenses and ${incomeCount} income transactions`)
+
+                    // Reload expenses to reflect changes
+                    await loadExpenses()
+
+                    // Switch to appropriate view
+                    if (incomeCount > 0 && expenseCount === 0) {
+                      setView('income')
+                    } else {
+                      setView('transactions')
+                    }
                   }}
                 />
               </div>
@@ -400,10 +597,32 @@ export default function MainApp() {
 
             {view === 'import' && <ImportExport expenses={expenses} onImportComplete={loadExpenses} />}
 
+            {view === 'assets' && <AssetsManager />}
+
+            {view === 'liabilities' && <LiabilitiesManager />}
+
+            {view === 'net-worth' && <NetWorth onNavigate={handleNavigate} />}
+
+            {view === 'investments' && <InvestmentsManager />}
+
+            {view === 'allocation' && <IncomeAllocation onNavigate={handleNavigate} />}
+
             {view === 'settings' && <Settings />}
           </div>
         </main>
       </div>
+
+      {/* Share Preview Modal */}
+      {showSharePreview && sharedData && (
+        <SharePreview
+          sharedData={sharedData}
+          onConfirm={handleSharedItemsConfirm}
+          onClose={handleSharePreviewClose}
+        />
+      )}
+
+      {/* Data Migration Status Toast */}
+      <MigrationStatus />
     </div>
   )
 }
