@@ -25,7 +25,7 @@ export const SUPABASE_TABLES = {
   },
   income: {
     table: 'app_income',
-    sessionField: 'session_id',
+    sessionField: 'user_id',
     orderBy: { field: 'date', ascending: false },
     description: 'All income entries'
   },

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Plus, TrendingUp, Edit2, Trash2, Calendar, DollarSign, X, Landmark, ArrowRight } from 'lucide-react'
+import { Plus, TrendingUp, Edit2, Trash2, Calendar, DollarSign, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useCurrency, CURRENCIES } from '../contexts/CurrencyContext'
 import { format } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
-import { Asset } from '../types/finance'
-import { getLiquidAssets, processIncomeWithAsset, reverseIncomeAssetLink } from '../utils/integrationService'
 
 interface Income {
   id: string
@@ -15,9 +13,6 @@ interface Income {
   date: string
   currency?: string
   created_at?: string
-  // Integration fields
-  linked_asset_id?: string
-  linked_asset_name?: string
 }
 
 const INCOME_CATEGORIES = ['Salary', 'Freelance', 'Investment', 'Dividends', 'Bonus', 'Rental', 'Gift', 'Other']
@@ -34,13 +29,8 @@ export default function IncomeManager() {
     amount: '',
     category: 'Salary',
     date: new Date().toISOString().split('T')[0],
-    currency: currency.code,
-    linked_asset_id: '',
-    linked_asset_name: ''
+    currency: currency.code
   })
-  // Integration: Available assets for linking
-  const [availableAssets, setAvailableAssets] = useState<Asset[]>([])
-  const [integrationMessage, setIntegrationMessage] = useState<string | null>(null)
 
   // Helper to convert income to display currency
   const getConvertedAmount = (income: Income) => {
@@ -51,18 +41,7 @@ export default function IncomeManager() {
 
   useEffect(() => {
     loadIncomes()
-    loadAvailableAssets()
   }, [])
-
-  // Load available assets for linking
-  const loadAvailableAssets = async () => {
-    try {
-      const assets = await getLiquidAssets()
-      setAvailableAssets(assets)
-    } catch (error) {
-      console.error('Error loading assets:', error)
-    }
-  }
 
   const loadIncomes = async () => {
     if (!user) return
@@ -89,60 +68,29 @@ export default function IncomeManager() {
 
     try {
       const amount = parseFloat(formData.amount)
+
       const incomeData = {
         user_id: user.id,
         description: formData.description,
         amount: amount,
         category: formData.category,
         date: formData.date,
-        currency: formData.currency,
-        linked_asset_id: formData.linked_asset_id || null,
-        linked_asset_name: formData.linked_asset_name || null
+        currency: formData.currency
       }
 
       if (editingIncome) {
-        // Handle asset link changes when editing
-        const oldLinkedAsset = editingIncome.linked_asset_id
-        const newLinkedAsset = formData.linked_asset_id
-        const oldAmount = editingIncome.amount
-
-        // If old link exists and is being changed/removed, reverse the old credit
-        if (oldLinkedAsset && oldLinkedAsset !== newLinkedAsset) {
-          await reverseIncomeAssetLink(oldLinkedAsset, oldAmount)
-        }
-
         const { error } = await supabase
           .from('app_income')
           .update(incomeData)
           .eq('id', editingIncome.id)
 
         if (error) throw error
-
-        // If new link exists, credit the new asset
-        if (newLinkedAsset) {
-          const result = await processIncomeWithAsset(newLinkedAsset, amount, formData.currency)
-          if (result.success) {
-            setIntegrationMessage(result.message)
-            setTimeout(() => setIntegrationMessage(null), 3000)
-          }
-        }
       } else {
         const { error } = await supabase
           .from('app_income')
           .insert([incomeData])
 
         if (error) throw error
-
-        // Integration: Credit linked asset if selected
-        if (formData.linked_asset_id) {
-          const result = await processIncomeWithAsset(formData.linked_asset_id, amount, formData.currency)
-          if (result.success) {
-            setIntegrationMessage(result.message)
-            setTimeout(() => setIntegrationMessage(null), 3000)
-            // Refresh assets list
-            loadAvailableAssets()
-          }
-        }
       }
 
       await loadIncomes()
@@ -157,21 +105,12 @@ export default function IncomeManager() {
     if (!confirm('Are you sure you want to delete this income?')) return
 
     try {
-      // Find the income to check for linked asset
-      const incomeToDelete = incomes.find(inc => inc.id === id)
-
       const { error } = await supabase
         .from('app_income')
         .delete()
         .eq('id', id)
 
       if (error) throw error
-
-      // Integration: Reverse asset credit if linked
-      if (incomeToDelete?.linked_asset_id) {
-        await reverseIncomeAssetLink(incomeToDelete.linked_asset_id, incomeToDelete.amount)
-        loadAvailableAssets()
-      }
 
       await loadIncomes()
     } catch (error) {
@@ -187,9 +126,7 @@ export default function IncomeManager() {
       amount: income.amount.toString(),
       category: income.category,
       date: income.date,
-      currency: income.currency || currency.code,
-      linked_asset_id: income.linked_asset_id || '',
-      linked_asset_name: income.linked_asset_name || ''
+      currency: income.currency || currency.code
     })
     setShowForm(true)
   }
@@ -200,22 +137,10 @@ export default function IncomeManager() {
       amount: '',
       category: 'Salary',
       date: new Date().toISOString().split('T')[0],
-      currency: currency.code,
-      linked_asset_id: '',
-      linked_asset_name: ''
+      currency: currency.code
     })
     setEditingIncome(null)
     setShowForm(false)
-  }
-
-  // Handle asset selection in dropdown
-  const handleAssetSelect = (assetId: string) => {
-    const selectedAsset = availableAssets.find(a => a.id === assetId)
-    setFormData({
-      ...formData,
-      linked_asset_id: assetId,
-      linked_asset_name: selectedAsset?.name || ''
-    })
   }
 
   // Total income converted to display currency
@@ -355,34 +280,6 @@ export default function IncomeManager() {
                   className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
                 />
               </div>
-
-              {/* Integration: Deposit to Account */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  <div className="flex items-center gap-2">
-                    <Landmark size={16} className="text-blue-500" />
-                    Deposit to Account (Optional)
-                  </div>
-                </label>
-                <select
-                  value={formData.linked_asset_id}
-                  onChange={(e) => handleAssetSelect(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
-                >
-                  <option value="">Don't link to account</option>
-                  {availableAssets.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.name} ({formatAmount(asset.value)})
-                    </option>
-                  ))}
-                </select>
-                {formData.linked_asset_id && (
-                  <p className="mt-2 text-sm text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                    <ArrowRight size={14} />
-                    This income will be added to {formData.linked_asset_name}'s balance
-                  </p>
-                )}
-              </div>
             </div>
 
             <div className="flex gap-3 mt-6">
@@ -401,18 +298,6 @@ export default function IncomeManager() {
               </button>
             </div>
           </form>
-        </div>
-      )}
-
-      {/* Integration success message */}
-      {integrationMessage && (
-        <div className="p-4 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 animate-fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
-              <Landmark size={16} className="text-green-600 dark:text-green-400" />
-            </div>
-            <p className="text-green-700 dark:text-green-300 font-medium">{integrationMessage}</p>
-          </div>
         </div>
       )}
 
@@ -462,16 +347,7 @@ export default function IncomeManager() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                          <div>
-                            {income.description}
-                            {income.linked_asset_id && (
-                              <div className="flex items-center gap-1 mt-1 text-xs text-blue-600 dark:text-blue-400">
-                                <ArrowRight size={12} />
-                                <Landmark size={12} />
-                                <span>{income.linked_asset_name || 'Linked Account'}</span>
-                              </div>
-                            )}
-                          </div>
+                          {income.description}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 dark:text-green-300 border border-green-200/50 dark:border-green-700/50">

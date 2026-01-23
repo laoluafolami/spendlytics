@@ -177,13 +177,26 @@ async function fetchSupabaseData(): Promise<BackupData['supabase']> {
   };
 
   try {
+    // Get authenticated user ID for tables that use user_id
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
     // Dynamically fetch all tables from config
     for (const [key, config] of Object.entries(SUPABASE_TABLES)) {
       try {
+        // Determine which ID to use based on sessionField
+        const idValue = config.sessionField === 'user_id' ? userId : sessionId;
+
+        // Skip if user_id is required but user is not logged in
+        if (config.sessionField === 'user_id' && !userId) {
+          console.warn(`[Backup] Skipping ${key}: user not authenticated`);
+          continue;
+        }
+
         let query = supabase
           .from(config.table)
           .select('*')
-          .eq(config.sessionField, sessionId);
+          .eq(config.sessionField, idValue);
 
         // Apply ordering if specified
         if (config.orderBy) {
@@ -568,28 +581,36 @@ export async function restoreFromBackup(
         }
       }
 
-      // Restore income
+      // Restore income (uses user_id instead of session_id)
       if (backup.supabase.income?.length > 0) {
         onProgress?.('Restoring income...', 45);
 
-        if (!mergeData) {
-          await supabase.from('app_income').delete().eq('session_id', targetSessionId);
-        }
+        // Get authenticated user for income table
+        const { data: { user } } = await supabase.auth.getUser();
+        const targetUserId = user?.id || backup.meta.userId;
 
-        const incomeBatches = chunkArray(backup.supabase.income as Record<string, unknown>[], 100);
-        for (const batch of incomeBatches) {
-          const preparedBatch = batch.map((i) => ({
-            ...i,
-            session_id: targetSessionId,
-            id: mergeData ? i.id : undefined
-          }));
-
-          const { error } = await supabase.from('app_income').upsert(preparedBatch);
-          if (error) {
-            result.errors.push(`Income: ${error.message}`);
-          } else {
-            result.restored.income += batch.length;
+        if (targetUserId) {
+          if (!mergeData) {
+            await supabase.from('app_income').delete().eq('user_id', targetUserId);
           }
+
+          const incomeBatches = chunkArray(backup.supabase.income as Record<string, unknown>[], 100);
+          for (const batch of incomeBatches) {
+            const preparedBatch = batch.map((i) => ({
+              ...i,
+              user_id: targetUserId,
+              id: mergeData ? i.id : undefined
+            }));
+
+            const { error } = await supabase.from('app_income').upsert(preparedBatch);
+            if (error) {
+              result.errors.push(`Income: ${error.message}`);
+            } else {
+              result.restored.income += batch.length;
+            }
+          }
+        } else {
+          result.warnings.push('Income: User not authenticated, skipped');
         }
       }
 
