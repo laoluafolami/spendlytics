@@ -37,15 +37,7 @@ import {
   updateInvestment,
   deleteInvestment,
 } from '../utils/financeDataService'
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
+import { useCurrency } from '../contexts/CurrencyContext'
 
 const formatPercent = (value: number) => {
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
@@ -93,6 +85,7 @@ interface InvestmentFormData {
   dividend_yield?: number
   last_dividend?: number
   notes?: string
+  currency: string
 }
 
 const initialFormData: InvestmentFormData = {
@@ -106,13 +99,15 @@ const initialFormData: InvestmentFormData = {
   dividend_yield: undefined,
   last_dividend: undefined,
   notes: '',
+  currency: 'NGN', // Will be overridden by current currency in component
 }
 
 const InvestmentsManager: React.FC = () => {
+  const { formatAmount, currency } = useCurrency()
   const [investments, setInvestments] = useState<Investment[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState<InvestmentFormData>(initialFormData)
+  const [formData, setFormData] = useState<InvestmentFormData>({ ...initialFormData, currency: currency.code })
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'value' | 'gain' | 'name'>('value')
@@ -290,6 +285,7 @@ const InvestmentsManager: React.FC = () => {
       dividend_yield: investment.dividend_yield,
       last_dividend: investment.last_dividend,
       notes: investment.notes,
+      currency: investment.currency || currency.code,
     })
     setShowModal(true)
   }
@@ -510,9 +506,9 @@ const InvestmentsManager: React.FC = () => {
             <Briefcase className="w-4 h-4" />
             <span className="text-sm">Portfolio Value</span>
           </div>
-          <p className="text-2xl font-bold">{formatCurrency(calculations.totalMarketValue)}</p>
+          <p className="text-2xl font-bold">{formatAmount(calculations.totalMarketValue)}</p>
           <p className="text-blue-200 text-sm mt-1">
-            Cost basis: {formatCurrency(calculations.totalCostBasis)}
+            Cost basis: {formatAmount(calculations.totalCostBasis)}
           </p>
         </div>
 
@@ -527,7 +523,7 @@ const InvestmentsManager: React.FC = () => {
             )}
             <span className="text-sm">Total Gain/Loss</span>
           </div>
-          <p className="text-2xl font-bold">{formatCurrency(calculations.totalGainLoss)}</p>
+          <p className="text-2xl font-bold">{formatAmount(calculations.totalGainLoss)}</p>
           <p className="text-gray-800 dark:text-white/80 text-sm mt-1">
             {formatPercent(calculations.totalGainLossPercent)}
           </p>
@@ -538,7 +534,7 @@ const InvestmentsManager: React.FC = () => {
             <DollarSign className="w-4 h-4" />
             <span className="text-sm">Annual Dividends</span>
           </div>
-          <p className="text-2xl font-bold">{formatCurrency(calculations.totalDividends)}</p>
+          <p className="text-2xl font-bold">{formatAmount(calculations.totalDividends)}</p>
           <p className="text-purple-200 text-sm mt-1">
             Yield: {calculations.totalMarketValue > 0
               ? ((calculations.totalDividends / calculations.totalMarketValue) * 100).toFixed(2)
@@ -564,8 +560,8 @@ const InvestmentsManager: React.FC = () => {
           {/* Sector Allocation */}
           <div className="bg-white/60 dark:bg-white/50 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl p-6 border border-white/20 dark:border-gray-200 dark:border-gray-700/50 shadow-lg">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Sector Allocation</h3>
-            <div className="flex items-center gap-6">
-              <div className="w-48 h-48">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              <div className="w-36 h-36 sm:w-48 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -581,7 +577,7 @@ const InvestmentsManager: React.FC = () => {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value: number) => formatAmount(value)}
                       contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
                     />
                   </PieChart>
@@ -606,8 +602,8 @@ const InvestmentsManager: React.FC = () => {
           {/* Type Allocation */}
           <div className="bg-white/60 dark:bg-white/50 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl p-6 border border-white/20 dark:border-gray-200 dark:border-gray-700/50 shadow-lg">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Asset Type Allocation</h3>
-            <div className="flex items-center gap-6">
-              <div className="w-48 h-48">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              <div className="w-36 h-36 sm:w-48 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -623,7 +619,7 @@ const InvestmentsManager: React.FC = () => {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value: number) => formatAmount(value)}
                       contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
                     />
                   </PieChart>
@@ -707,7 +703,7 @@ const InvestmentsManager: React.FC = () => {
                   </td>
                   <td className="px-4 py-3 text-gray-800 dark:text-white">{investment.shares.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
-                    {formatCurrency(investment.average_cost)}
+                    {formatAmount(investment.average_cost)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <input
@@ -718,12 +714,12 @@ const InvestmentsManager: React.FC = () => {
                     />
                   </td>
                   <td className="px-4 py-3 text-right text-gray-800 dark:text-white font-medium">
-                    {formatCurrency(investment.market_value)}
+                    {formatAmount(investment.market_value)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div>
                       <p className={investment.gain_loss >= 0 ? 'text-green-400' : 'text-red-400'}>
-                        {formatCurrency(investment.gain_loss)}
+                        {formatAmount(investment.gain_loss)}
                       </p>
                       <p className={`text-sm ${investment.gain_loss >= 0 ? 'text-green-400/70' : 'text-red-400/70'}`}>
                         {formatPercent(investment.gain_loss_percent)}
@@ -800,7 +796,7 @@ const InvestmentsManager: React.FC = () => {
                       <p className="text-green-400 font-semibold">
                         {formatPercent(investment.gain_loss_percent)}
                       </p>
-                      <p className="text-green-400/70 text-sm">{formatCurrency(investment.gain_loss)}</p>
+                      <p className="text-green-400/70 text-sm">{formatAmount(investment.gain_loss)}</p>
                     </div>
                   </div>
                 ))}
@@ -831,7 +827,7 @@ const InvestmentsManager: React.FC = () => {
                       <p className="text-red-400 font-semibold">
                         {formatPercent(investment.gain_loss_percent)}
                       </p>
-                      <p className="text-red-400/70 text-sm">{formatCurrency(investment.gain_loss)}</p>
+                      <p className="text-red-400/70 text-sm">{formatAmount(investment.gain_loss)}</p>
                     </div>
                   </div>
                 ))}
@@ -997,13 +993,13 @@ const InvestmentsManager: React.FC = () => {
                     <div>
                       <span className="text-gray-500 dark:text-gray-400">Market Value:</span>
                       <span className="text-gray-800 dark:text-white ml-2">
-                        {formatCurrency(formData.shares * formData.current_price)}
+                        {formatAmount(formData.shares * formData.current_price)}
                       </span>
                     </div>
                     <div>
                       <span className="text-gray-500 dark:text-gray-400">Cost Basis:</span>
                       <span className="text-gray-800 dark:text-white ml-2">
-                        {formatCurrency(formData.shares * formData.average_cost)}
+                        {formatAmount(formData.shares * formData.average_cost)}
                       </span>
                     </div>
                     <div>
@@ -1011,7 +1007,7 @@ const InvestmentsManager: React.FC = () => {
                       <span className={`ml-2 ${
                         formData.current_price >= formData.average_cost ? 'text-green-400' : 'text-red-400'
                       }`}>
-                        {formatCurrency(formData.shares * (formData.current_price - formData.average_cost))}
+                        {formatAmount(formData.shares * (formData.current_price - formData.average_cost))}
                       </span>
                     </div>
                     <div>

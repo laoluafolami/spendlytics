@@ -416,37 +416,37 @@ export default function BudgetManager({ expenses }: BudgetManagerProps) {
 
       {/* Budget Health Indicators */}
       {budgetStatus.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           <div className="group relative">
             <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl blur-xl opacity-10"></div>
-            <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg text-center">
-              <div className="w-12 h-12 mx-auto rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-2">
-                <CheckCircle2 className="text-green-600 dark:text-green-400" size={24} />
+            <div className="relative p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg text-center">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 mx-auto rounded-lg sm:rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-1 sm:mb-2">
+                <CheckCircle2 className="text-green-600 dark:text-green-400" size={16} />
               </div>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{summary.onTrackCount}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">On Track</p>
+              <p className="text-lg sm:text-2xl font-bold text-green-600 dark:text-green-400">{summary.onTrackCount}</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">On Track</p>
             </div>
           </div>
 
           <div className="group relative">
             <div className="absolute inset-0 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl blur-xl opacity-10"></div>
-            <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg text-center">
-              <div className="w-12 h-12 mx-auto rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center mb-2">
-                <AlertCircle className="text-yellow-600 dark:text-yellow-400" size={24} />
+            <div className="relative p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg text-center">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 mx-auto rounded-lg sm:rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center mb-1 sm:mb-2">
+                <AlertCircle className="text-yellow-600 dark:text-yellow-400" size={16} />
               </div>
-              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{summary.atRiskCount}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">At Risk</p>
+              <p className="text-lg sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">{summary.atRiskCount}</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">At Risk</p>
             </div>
           </div>
 
           <div className="group relative">
             <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl blur-xl opacity-10"></div>
-            <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg text-center">
-              <div className="w-12 h-12 mx-auto rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-2">
-                <AlertTriangle className="text-red-600 dark:text-red-400" size={24} />
+            <div className="relative p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg text-center">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 mx-auto rounded-lg sm:rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-1 sm:mb-2">
+                <AlertTriangle className="text-red-600 dark:text-red-400" size={16} />
               </div>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{summary.overBudgetCount}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Over Budget</p>
+              <p className="text-lg sm:text-2xl font-bold text-red-600 dark:text-red-400">{summary.overBudgetCount}</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">Over Budget</p>
             </div>
           </div>
         </div>

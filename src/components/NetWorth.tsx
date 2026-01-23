@@ -471,8 +471,8 @@ const NetWorth: React.FC<NetWorthProps> = ({ onNavigate }) => {
             </button>
           </div>
           {assetPieData.length > 0 ? (
-            <div className="flex items-center gap-6">
-              <div className="w-48 h-48">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              <div className="w-36 h-36 sm:w-48 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -534,8 +534,8 @@ const NetWorth: React.FC<NetWorthProps> = ({ onNavigate }) => {
             </button>
           </div>
           {liabilityPieData.length > 0 ? (
-            <div className="flex items-center gap-6">
-              <div className="w-48 h-48">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              <div className="w-36 h-36 sm:w-48 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie

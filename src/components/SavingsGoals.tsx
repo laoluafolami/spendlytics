@@ -519,7 +519,7 @@ export default function SavingsGoals() {
 
       {/* Status Indicators */}
       {enrichedGoals.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="group relative">
             <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl blur-xl opacity-10"></div>
             <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg text-center">
@@ -727,18 +727,18 @@ export default function SavingsGoals() {
             </div>
 
             {calculateRequired && (
-              <div className="grid grid-cols-3 gap-4 p-4 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl border border-teal-200 dark:border-teal-800">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl border border-teal-200 dark:border-teal-800">
                 <div className="text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Daily</p>
-                  <p className="font-bold text-teal-600 dark:text-teal-400">{formatAmount(calculateRequired.daily)}</p>
+                  <p className="text-sm sm:text-base font-bold text-teal-600 dark:text-teal-400">{formatAmount(calculateRequired.daily)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Weekly</p>
-                  <p className="font-bold text-teal-600 dark:text-teal-400">{formatAmount(calculateRequired.weekly)}</p>
+                  <p className="text-sm sm:text-base font-bold text-teal-600 dark:text-teal-400">{formatAmount(calculateRequired.weekly)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Monthly</p>
-                  <p className="font-bold text-teal-600 dark:text-teal-400">{formatAmount(calculateRequired.monthly)}</p>
+                  <p className="text-sm sm:text-base font-bold text-teal-600 dark:text-teal-400">{formatAmount(calculateRequired.monthly)}</p>
                 </div>
               </div>
             )}

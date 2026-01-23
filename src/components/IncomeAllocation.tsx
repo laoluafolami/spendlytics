@@ -581,7 +581,7 @@ const IncomeAllocation: React.FC<IncomeAllocationProps> = ({ onNavigate }) => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 text-blue-200">
@@ -686,13 +686,13 @@ const IncomeAllocation: React.FC<IncomeAllocationProps> = ({ onNavigate }) => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Allocation Pie Chart */}
-        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl p-6 border border-white/20 dark:border-gray-700/50 shadow-lg">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Allocation Distribution</h3>
-          <div className="flex items-center gap-6">
-            <div className="w-48 h-48">
+        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl p-4 sm:p-6 border border-white/20 dark:border-gray-700/50 shadow-lg">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-4">Allocation Distribution</h3>
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+            <div className="w-36 h-36 sm:w-48 sm:h-48 flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value">
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={35} outerRadius={60} dataKey="value">
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -701,14 +701,14 @@ const IncomeAllocation: React.FC<IncomeAllocationProps> = ({ onNavigate }) => {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex-1 space-y-2 max-h-48 overflow-y-auto">
+            <div className="w-full sm:flex-1 space-y-2 max-h-48 overflow-y-auto">
               {pieData.map((item) => (
                 <div key={item.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-gray-600 dark:text-gray-300 text-sm">{item.name}</span>
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm truncate">{item.name}</span>
                   </div>
-                  <span className="text-gray-800 dark:text-white font-medium">{item.value}%</span>
+                  <span className="text-gray-800 dark:text-white font-medium text-sm">{item.value}%</span>
                 </div>
               ))}
             </div>
@@ -716,24 +716,24 @@ const IncomeAllocation: React.FC<IncomeAllocationProps> = ({ onNavigate }) => {
         </div>
 
         {/* Target vs Actual */}
-        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl p-6 border border-white/20 dark:border-gray-700/50 shadow-lg">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Target vs Actual Spending</h3>
-          <div className="h-64">
+        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl p-4 sm:p-6 border border-white/20 dark:border-gray-700/50 shadow-lg">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-4">Target vs Actual Spending</h3>
+          <div className="h-48 sm:h-64">
             {comparisonData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={comparisonData} layout="vertical">
+                <BarChart data={comparisonData} layout="vertical" margin={{ left: -20, right: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis type="number" tickFormatter={(value) => `₦${(value / 1000).toFixed(0)}k`} stroke="#9CA3AF" />
-                  <YAxis type="category" dataKey="name" stroke="#9CA3AF" width={100} />
+                  <XAxis type="number" tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} stroke="#9CA3AF" fontSize={10} />
+                  <YAxis type="category" dataKey="name" stroke="#9CA3AF" width={70} fontSize={10} tick={{ fontSize: 10 }} />
                   <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="Target" fill="#3B82F6" radius={[0, 4, 4, 0]} />
                   <Bar dataKey="Actual" fill="#10B981" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                <p>Add buckets to see comparison</p>
+                <p className="text-sm">Add buckets to see comparison</p>
               </div>
             )}
           </div>

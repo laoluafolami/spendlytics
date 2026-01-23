@@ -374,7 +374,7 @@ export default function FinancialDashboard({ expenses, onNavigate }: FinancialDa
       </div>
 
       {/* Quick Actions Row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <button
           onClick={() => onNavigate('capture')}
           className="group p-3 rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 hover:from-rose-500/20 hover:to-pink-500/20 border border-rose-200/50 dark:border-rose-800/50 transition-all"
