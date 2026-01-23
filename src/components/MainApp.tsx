@@ -460,7 +460,7 @@ export default function MainApp() {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar overlay for mobile */}
         {sidebarOpen && (
           <div

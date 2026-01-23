@@ -38,9 +38,10 @@
       Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overscroll-behavior: contain;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-x: none;
     overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 50%, #fdf2f8 100%);
     min-height: 100vh;
     min-height: -webkit-fill-available;
@@ -59,6 +60,8 @@
     padding-right: var(--safe-area-right);
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Interactive elements - proper touch targets */
@@ -474,6 +477,12 @@
   }
 
   /* ===== RESPONSIVE UTILITIES ===== */
+  /* Mobile scroll fix */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+
   /* Hide on mobile, show on larger screens */
   .mobile-hidden {
     @apply hidden sm:block;
