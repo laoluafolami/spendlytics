@@ -8,6 +8,7 @@ import ResetPassword from './components/ResetPassword'
 import ProtectedRoute from './components/ProtectedRoute'
 import MainApp from './components/MainApp'
 import InstallPrompt from './components/InstallPrompt'
+import OfflineIndicator from './components/OfflineIndicator'
 
 function App() {
   const { user, loading } = useAuth()
@@ -25,6 +26,7 @@ function App() {
 
   return (
     <>
+      <OfflineIndicator variant="banner" />
       <Routes>
         <Route path="/" element={user ? <Navigate to="/app" replace /> : <LandingPage />} />
         <Route path="/login" element={user ? <Navigate to="/app" replace /> : <Login />} />
@@ -40,6 +42,7 @@ function App() {
           }
         />
       </Routes>
+      <OfflineIndicator variant="toast" />
       <InstallPrompt />
     </>
   )

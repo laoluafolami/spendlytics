@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Settings as SettingsIcon, DollarSign, Check, Target, TrendingUp, CreditCard, Tag, Receipt, Repeat, Filter, Bell, BarChart2, FileText, Upload, Download, Sparkles, Coins, Trash2, AlertTriangle, Loader2, Cloud, CloudOff, RefreshCw, CheckCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Settings as SettingsIcon, DollarSign, Check, Target, TrendingUp, CreditCard, Tag, Receipt, Repeat, Filter, Bell, BarChart2, FileText, Upload, Download, Sparkles, Coins, Trash2, AlertTriangle, Loader2, Cloud, CloudOff, RefreshCw, CheckCircle, Shield, HardDrive } from 'lucide-react'
+import { isBackupRecommended, getLastBackupTime } from '../lib/backupService'
 import { useCurrency, CURRENCIES } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -19,6 +20,23 @@ export default function Settings() {
   // Cloud sync state
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncSuccess, setSyncSuccess] = useState<string | null>(null)
+
+  // Backup state
+  const [backupNeeded, setBackupNeeded] = useState(false)
+  const [lastBackup, setLastBackup] = useState<string | null>(null)
+
+  // Check backup status on mount
+  useEffect(() => {
+    const checkBackupStatus = async () => {
+      const needed = await isBackupRecommended()
+      setBackupNeeded(needed)
+      const lastBackupTime = await getLastBackupTime()
+      if (lastBackupTime) {
+        setLastBackup(new Date(lastBackupTime).toLocaleDateString())
+      }
+    }
+    checkBackupStatus()
+  }, [])
 
   // Handle manual sync
   const handleManualSync = async () => {
@@ -417,6 +435,68 @@ export default function Settings() {
                   onChange={() => handleToggle('feature_auto_backup')}
                 />
               </div>
+            </div>
+
+            {/* Backup & Restore Section */}
+            <div className="pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="text-green-600 dark:text-green-400" size={20} />
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Backup & Restore</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Never lose your data - create backups and restore anytime
+              </p>
+
+              {/* Backup Alert */}
+              {backupNeeded && (
+                <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-800 dark:text-amber-200">
+                        Backup Recommended
+                      </p>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                        {lastBackup
+                          ? `Your last backup was on ${lastBackup}. Create a new backup to protect your data.`
+                          : "You haven't created a backup yet. Protect your financial data now!"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Backup Info */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                      <HardDrive className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {lastBackup ? 'Last Backup' : 'No Backup Yet'}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {lastBackup || 'Create your first backup to protect your data'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Backup Button */}
+              <a
+                href="/app?view=backup"
+                className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all"
+              >
+                <Shield className="w-5 h-5" />
+                Open Backup & Restore
+              </a>
+
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
+                Download backups to your device or restore from a previous backup
+              </p>
             </div>
 
             <div className="pt-6 border-t border-gray-200/50 dark:border-gray-700/50">

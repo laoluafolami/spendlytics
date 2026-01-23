@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3B82F6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Offline - WealthPulse</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 50%, #fdf2f8 100%);
+      padding: 20px;
+      padding-top: max(20px, env(safe-area-inset-top));
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #0f172a 100%);
+      }
+      .container { color: #f3f4f6; }
+      .subtitle { color: #9ca3af; }
+      .features { background: rgba(31, 41, 55, 0.5); border-color: rgba(75, 85, 99, 0.3); }
+      .feature { color: #d1d5db; }
+    }
+
+    .container {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .icon-wrapper {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 28px;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 40px rgba(59, 130, 246, 0.3);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 20px 40px rgba(59, 130, 246, 0.3); }
+      50% { transform: scale(1.05); box-shadow: 0 25px 50px rgba(59, 130, 246, 0.4); }
+    }
+
+    .icon-wrapper svg {
+      width: 50px;
+      height: 50px;
+      fill: none;
+      stroke: white;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: #6b7280;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .features {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+
+    .features-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #9ca3af;
+      margin-bottom: 16px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    .feature:not(:last-child) {
+      border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+    }
+
+    .feature-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .feature-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: white;
+      stroke-width: 2;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+      width: 100%;
+      max-width: 280px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 40px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .status {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    @media (max-width: 380px) {
+      h1 { font-size: 24px; }
+      .subtitle { font-size: 14px; }
+      .icon-wrapper { width: 80px; height: 80px; }
+      .icon-wrapper svg { width: 40px; height: 40px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon-wrapper">
+      <svg viewBox="0 0 24 24">
+        <path d="M1 1l22 22M9 9a3 3 0 1 0 4.243 4.243"/>
+        <path d="M16.727 16.727A10.969 10.969 0 0 1 12 18c-4.97 0-9-3.582-9-8a8.867 8.867 0 0 1 .889-3.889"/>
+        <path d="M21.111 11.889A8.867 8.867 0 0 0 21 10c0-4.418-4.03-8-9-8a10.969 10.969 0 0 0-4.727 1.273"/>
+      </svg>
+    </div>
+
+    <h1>You're Offline</h1>
+    <p class="subtitle">
+      No internet connection detected. Some features may be unavailable until you're back online.
+    </p>
+
+    <div class="features">
+      <p class="features-title">Still available offline</p>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <span>View cached transactions</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <span>Browse your expense history</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <span>Add expenses (syncs when online)</span>
+      </div>
+    </div>
+
+    <button class="btn" onclick="window.location.reload()">
+      <svg viewBox="0 0 24 24">
+        <path d="M23 4v6h-6"/>
+        <path d="M1 20v-6h6"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Try Again
+    </button>
+
+    <div class="status">
+      <span class="status-dot"></span>
+      <span>Waiting for connection...</span>
+    </div>
+  </div>
+
+  <script>
+    // Auto-reload when back online
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+
+    // Check connection status periodically
+    setInterval(() => {
+      if (navigator.onLine) {
+        window.location.reload();
+      }
+    }, 5000);
+  </script>
+</body>
+</html>

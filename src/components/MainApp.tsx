@@ -26,9 +26,10 @@ import NetWorth from './NetWorth'
 import InvestmentsManager from './InvestmentsManager'
 import IncomeAllocation from './IncomeAllocation'
 import MigrationStatus from './MigrationStatus'
+import BackupRestore from './BackupRestore'
 import { SharedData, getSharedData, clearSharedData } from '../utils/shareService'
 
-type View = 'dashboard' | 'transactions' | 'expenses' | 'add' | 'capture' | 'bulk-import' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import' | 'assets' | 'liabilities' | 'net-worth' | 'investments' | 'allocation'
+type View = 'dashboard' | 'transactions' | 'expenses' | 'add' | 'capture' | 'bulk-import' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import' | 'assets' | 'liabilities' | 'net-worth' | 'investments' | 'allocation' | 'backup'
 
 export default function MainApp() {
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -97,6 +98,18 @@ export default function MainApp() {
   useEffect(() => {
     loadExpenses()
   }, [user])
+
+  // Check for view parameter from URL
+  useEffect(() => {
+    const viewParam = searchParams.get('view')
+    if (viewParam && ['backup', 'settings', 'capture', 'add', 'transactions', 'analytics', 'income', 'budgets', 'savings', 'reports', 'import', 'assets', 'liabilities', 'net-worth', 'investments', 'allocation'].includes(viewParam)) {
+      setView(viewParam as View)
+      // Clear the view param from URL
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('view')
+      setSearchParams(newParams)
+    }
+  }, [searchParams, setSearchParams])
 
   // Check for shared content when app loads
   useEffect(() => {
@@ -663,6 +676,8 @@ export default function MainApp() {
             {view === 'allocation' && <IncomeAllocation onNavigate={handleNavigate} />}
 
             {view === 'settings' && <Settings />}
+
+            {view === 'backup' && <BackupRestore onClose={() => setView('settings')} />}
           </div>
         </main>
       </div>
