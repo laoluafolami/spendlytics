@@ -69,13 +69,13 @@ export default function IncomeManager() {
     try {
       const amount = parseFloat(formData.amount)
 
+      // Match the schema used by MainApp.tsx which works
       const incomeData = {
         user_id: user.id,
         description: formData.description,
         amount: amount,
         category: formData.category,
-        date: formData.date,
-        currency: formData.currency
+        date: formData.date
       }
 
       if (editingIncome) {
@@ -84,20 +84,21 @@ export default function IncomeManager() {
           .update(incomeData)
           .eq('id', editingIncome.id)
 
-        if (error) throw error
+        if (error) throw new Error(error.message)
       } else {
         const { error } = await supabase
           .from('app_income')
           .insert([incomeData])
 
-        if (error) throw error
+        if (error) throw new Error(error.message)
       }
 
       await loadIncomes()
       resetForm()
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving income:', error)
-      alert('Failed to save income. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      alert(`Failed to save income: ${errorMessage}`)
     }
   }
 
