@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, BarChart3, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, LogOut, Scan, FileUp, ArrowLeftRight, ArrowDownCircle, PiggyBank, CreditCard, LineChart, Briefcase, PieChart, Menu, X, MoreHorizontal, Home } from 'lucide-react'
+import { Plus, BarChart3, Sun, Moon, TrendingUp, Settings as SettingsIcon, Target, DollarSign, Wallet, FileText, Upload, LogOut, Scan, FileUp, ArrowLeftRight, ArrowDownCircle, PiggyBank, CreditCard, LineChart, Briefcase, PieChart, Menu, X, Home } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Expense, ExpenseFormData } from '../types/expense'
 import { useTheme } from '../contexts/ThemeContext'
@@ -758,17 +758,17 @@ export default function MainApp() {
             <span className="text-[10px] font-medium mt-0.5">Analytics</span>
           </button>
 
-          {/* More (Opens sidebar) */}
+          {/* Settings */}
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => handleNavigate('settings')}
             className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 min-w-[60px] ${
-              sidebarOpen
+              view === 'settings'
                 ? 'text-gray-800 dark:text-white bg-gray-100 dark:bg-gray-800'
                 : 'text-gray-500 dark:text-gray-400'
             }`}
           >
-            <MoreHorizontal size={22} strokeWidth={2} />
-            <span className="text-[10px] font-medium mt-0.5">More</span>
+            <SettingsIcon size={22} strokeWidth={view === 'settings' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium mt-0.5">Settings</span>
           </button>
         </div>
       </nav>
