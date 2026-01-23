@@ -140,19 +140,17 @@ export async function createAsset(asset: Omit<Asset, 'id' | 'user_id' | 'created
 
       if (error) throw error
 
-      // Update localStorage
-      const localAssets = loadFromLocalStorage<Asset>(STORAGE_KEYS.assets)
-      saveToLocalStorage(STORAGE_KEYS.assets, [data, ...localAssets])
-
+      // Update localStorage cache (don't add - will be fetched on next getAssets)
       return data
     } catch (error) {
       console.error('Error creating asset in Supabase:', error)
       // Add to sync queue for later
       addToSyncQueue({ table: 'assets', operation: 'insert', data: newAsset, timestamp: Date.now() })
+      // Fall through to localStorage save
     }
   }
 
-  // Save to localStorage
+  // Save to localStorage (only when offline or Supabase failed)
   const localAssets = loadFromLocalStorage<Asset>(STORAGE_KEYS.assets)
   saveToLocalStorage(STORAGE_KEYS.assets, [newAsset, ...localAssets])
 
@@ -175,19 +173,15 @@ export async function updateAsset(id: string, updates: Partial<Asset>): Promise<
 
       if (error) throw error
 
-      // Update localStorage
-      const localAssets = loadFromLocalStorage<Asset>(STORAGE_KEYS.assets)
-      const updatedLocal = localAssets.map(a => a.id === id ? { ...a, ...updates, updated_at: now } : a)
-      saveToLocalStorage(STORAGE_KEYS.assets, updatedLocal)
-
       return data
     } catch (error) {
       console.error('Error updating asset in Supabase:', error)
       addToSyncQueue({ table: 'assets', operation: 'update', data: { id, ...updates }, timestamp: Date.now() })
+      // Fall through to localStorage update
     }
   }
 
-  // Update localStorage
+  // Update localStorage (only when offline or Supabase failed)
   const localAssets = loadFromLocalStorage<Asset>(STORAGE_KEYS.assets)
   const updatedLocal = localAssets.map(a => a.id === id ? { ...a, ...updates, updated_at: now } : a)
   saveToLocalStorage(STORAGE_KEYS.assets, updatedLocal)
@@ -208,18 +202,15 @@ export async function deleteAsset(id: string): Promise<boolean> {
 
       if (error) throw error
 
-      // Update localStorage
-      const localAssets = loadFromLocalStorage<Asset>(STORAGE_KEYS.assets)
-      saveToLocalStorage(STORAGE_KEYS.assets, localAssets.filter(a => a.id !== id))
-
       return true
     } catch (error) {
       console.error('Error deleting asset from Supabase:', error)
       addToSyncQueue({ table: 'assets', operation: 'delete', data: { id }, timestamp: Date.now() })
+      // Fall through to localStorage delete
     }
   }
 
-  // Remove from localStorage
+  // Remove from localStorage (only when offline or Supabase failed)
   const localAssets = loadFromLocalStorage<Asset>(STORAGE_KEYS.assets)
   saveToLocalStorage(STORAGE_KEYS.assets, localAssets.filter(a => a.id !== id))
 
@@ -278,16 +269,15 @@ export async function createLiability(liability: Omit<Liability, 'id' | 'user_id
 
       if (error) throw error
 
-      const localLiabilities = loadFromLocalStorage<Liability>(STORAGE_KEYS.liabilities)
-      saveToLocalStorage(STORAGE_KEYS.liabilities, [data, ...localLiabilities])
-
       return data
     } catch (error) {
       console.error('Error creating liability in Supabase:', error)
       addToSyncQueue({ table: 'liabilities', operation: 'insert', data: newLiability, timestamp: Date.now() })
+      // Fall through to localStorage save
     }
   }
 
+  // Save to localStorage (only when offline or Supabase failed)
   const localLiabilities = loadFromLocalStorage<Liability>(STORAGE_KEYS.liabilities)
   saveToLocalStorage(STORAGE_KEYS.liabilities, [newLiability, ...localLiabilities])
 
@@ -310,17 +300,15 @@ export async function updateLiability(id: string, updates: Partial<Liability>): 
 
       if (error) throw error
 
-      const localLiabilities = loadFromLocalStorage<Liability>(STORAGE_KEYS.liabilities)
-      const updatedLocal = localLiabilities.map(l => l.id === id ? { ...l, ...updates, updated_at: now } : l)
-      saveToLocalStorage(STORAGE_KEYS.liabilities, updatedLocal)
-
       return data
     } catch (error) {
       console.error('Error updating liability in Supabase:', error)
       addToSyncQueue({ table: 'liabilities', operation: 'update', data: { id, ...updates }, timestamp: Date.now() })
+      // Fall through to localStorage update
     }
   }
 
+  // Update localStorage (only when offline or Supabase failed)
   const localLiabilities = loadFromLocalStorage<Liability>(STORAGE_KEYS.liabilities)
   const updatedLocal = localLiabilities.map(l => l.id === id ? { ...l, ...updates, updated_at: now } : l)
   saveToLocalStorage(STORAGE_KEYS.liabilities, updatedLocal)
@@ -341,16 +329,15 @@ export async function deleteLiability(id: string): Promise<boolean> {
 
       if (error) throw error
 
-      const localLiabilities = loadFromLocalStorage<Liability>(STORAGE_KEYS.liabilities)
-      saveToLocalStorage(STORAGE_KEYS.liabilities, localLiabilities.filter(l => l.id !== id))
-
       return true
     } catch (error) {
       console.error('Error deleting liability from Supabase:', error)
       addToSyncQueue({ table: 'liabilities', operation: 'delete', data: { id }, timestamp: Date.now() })
+      // Fall through to localStorage delete
     }
   }
 
+  // Remove from localStorage (only when offline or Supabase failed)
   const localLiabilities = loadFromLocalStorage<Liability>(STORAGE_KEYS.liabilities)
   saveToLocalStorage(STORAGE_KEYS.liabilities, localLiabilities.filter(l => l.id !== id))
 
@@ -407,16 +394,15 @@ export async function createInvestment(investment: Omit<Investment, 'id' | 'user
 
       if (error) throw error
 
-      const localInvestments = loadFromLocalStorage<Investment>(STORAGE_KEYS.investments)
-      saveToLocalStorage(STORAGE_KEYS.investments, [data, ...localInvestments])
-
       return data
     } catch (error) {
       console.error('Error creating investment in Supabase:', error)
       addToSyncQueue({ table: 'investments', operation: 'insert', data: newInvestment, timestamp: Date.now() })
+      // Fall through to localStorage save
     }
   }
 
+  // Save to localStorage (only when offline or Supabase failed)
   const localInvestments = loadFromLocalStorage<Investment>(STORAGE_KEYS.investments)
   saveToLocalStorage(STORAGE_KEYS.investments, [newInvestment, ...localInvestments])
 
@@ -439,17 +425,15 @@ export async function updateInvestment(id: string, updates: Partial<Investment>)
 
       if (error) throw error
 
-      const localInvestments = loadFromLocalStorage<Investment>(STORAGE_KEYS.investments)
-      const updatedLocal = localInvestments.map(i => i.id === id ? { ...i, ...updates, updated_at: now } : i)
-      saveToLocalStorage(STORAGE_KEYS.investments, updatedLocal)
-
       return data
     } catch (error) {
       console.error('Error updating investment in Supabase:', error)
       addToSyncQueue({ table: 'investments', operation: 'update', data: { id, ...updates }, timestamp: Date.now() })
+      // Fall through to localStorage update
     }
   }
 
+  // Update localStorage (only when offline or Supabase failed)
   const localInvestments = loadFromLocalStorage<Investment>(STORAGE_KEYS.investments)
   const updatedLocal = localInvestments.map(i => i.id === id ? { ...i, ...updates, updated_at: now } : i)
   saveToLocalStorage(STORAGE_KEYS.investments, updatedLocal)
@@ -470,16 +454,15 @@ export async function deleteInvestment(id: string): Promise<boolean> {
 
       if (error) throw error
 
-      const localInvestments = loadFromLocalStorage<Investment>(STORAGE_KEYS.investments)
-      saveToLocalStorage(STORAGE_KEYS.investments, localInvestments.filter(i => i.id !== id))
-
       return true
     } catch (error) {
       console.error('Error deleting investment from Supabase:', error)
       addToSyncQueue({ table: 'investments', operation: 'delete', data: { id }, timestamp: Date.now() })
+      // Fall through to localStorage delete
     }
   }
 
+  // Remove from localStorage (only when offline or Supabase failed)
   const localInvestments = loadFromLocalStorage<Investment>(STORAGE_KEYS.investments)
   saveToLocalStorage(STORAGE_KEYS.investments, localInvestments.filter(i => i.id !== id))
 

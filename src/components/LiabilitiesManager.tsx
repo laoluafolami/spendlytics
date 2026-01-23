@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Plus, CreditCard, Home, Car, GraduationCap, Briefcase, Users, FileText, Edit2, Trash2, X, TrendingDown, AlertTriangle } from 'lucide-react'
-import { useCurrency } from '../contexts/CurrencyContext'
+import { useCurrency, CURRENCIES } from '../contexts/CurrencyContext'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 // Supabase data service for cloud sync
 import { getLiabilities, createLiability, updateLiability, deleteLiability } from '../utils/financeDataService'
@@ -18,7 +18,7 @@ const LIABILITY_TYPES = [
 ] as const
 
 export default function LiabilitiesManager() {
-  const { formatAmount, currency } = useCurrency()
+  const { formatAmount, currency, convertAmountSync } = useCurrency()
   const [liabilities, setLiabilities] = useState<Liability[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingLiability, setEditingLiability] = useState<Liability | null>(null)
@@ -30,8 +30,26 @@ export default function LiabilitiesManager() {
     interest_rate: '',
     minimum_payment: '',
     due_date: '',
-    notes: ''
+    notes: '',
+    currency: currency.code
   })
+
+  // Helper to convert liability value to display currency
+  const getConvertedBalance = useCallback((liability: Liability) => {
+    if (liability.currency === currency.code) return liability.current_balance
+    return convertAmountSync(liability.current_balance, liability.currency, currency.code)
+  }, [currency.code, convertAmountSync])
+
+  const getConvertedPrincipal = useCallback((liability: Liability) => {
+    if (liability.currency === currency.code) return liability.principal_amount
+    return convertAmountSync(liability.principal_amount, liability.currency, currency.code)
+  }, [currency.code, convertAmountSync])
+
+  const getConvertedPayment = useCallback((liability: Liability) => {
+    if (!liability.minimum_payment) return null
+    if (liability.currency === currency.code) return liability.minimum_payment
+    return convertAmountSync(liability.minimum_payment, liability.currency, currency.code)
+  }, [currency.code, convertAmountSync])
 
   // Load liabilities from Supabase/localStorage
   const loadLiabilities = useCallback(async () => {
@@ -58,7 +76,7 @@ export default function LiabilitiesManager() {
       interest_rate: formData.interest_rate ? parseFloat(formData.interest_rate) : undefined,
       minimum_payment: formData.minimum_payment ? parseFloat(formData.minimum_payment) : undefined,
       due_date: formData.due_date ? parseInt(formData.due_date) : undefined,
-      currency: currency.code,
+      currency: formData.currency,
       notes: formData.notes || undefined,
       is_active: true,
     }
@@ -98,7 +116,8 @@ export default function LiabilitiesManager() {
       interest_rate: '',
       minimum_payment: '',
       due_date: '',
-      notes: ''
+      notes: '',
+      currency: currency.code
     })
   }
 
@@ -112,18 +131,20 @@ export default function LiabilitiesManager() {
       interest_rate: liability.interest_rate?.toString() || '',
       minimum_payment: liability.minimum_payment?.toString() || '',
       due_date: liability.due_date?.toString() || '',
-      notes: liability.notes || ''
+      notes: liability.notes || '',
+      currency: liability.currency || currency.code
     })
     setShowForm(true)
   }
 
+  // Calculate totals with currency conversion
   const totalLiabilities = useMemo(() =>
-    liabilities.reduce((sum, l) => sum + l.current_balance, 0)
-  , [liabilities])
+    liabilities.reduce((sum, l) => sum + getConvertedBalance(l), 0)
+  , [liabilities, getConvertedBalance])
 
   const totalMonthlyPayment = useMemo(() =>
-    liabilities.reduce((sum, l) => sum + (l.minimum_payment || 0), 0)
-  , [liabilities])
+    liabilities.reduce((sum, l) => sum + (getConvertedPayment(l) || 0), 0)
+  , [liabilities, getConvertedPayment])
 
   const highInterestDebt = useMemo(() =>
     liabilities.filter(l => l.interest_rate && l.interest_rate > 15)
@@ -132,7 +153,7 @@ export default function LiabilitiesManager() {
   const pieData = useMemo(() => {
     const byType: Record<string, number> = {}
     liabilities.forEach(l => {
-      byType[l.type] = (byType[l.type] || 0) + l.current_balance
+      byType[l.type] = (byType[l.type] || 0) + getConvertedBalance(l)
     })
 
     return Object.entries(byType).map(([type, value]) => {
@@ -143,15 +164,15 @@ export default function LiabilitiesManager() {
         color: typeInfo?.color || '#6B7280'
       }
     })
-  }, [liabilities])
+  }, [liabilities, getConvertedBalance])
 
-  // Calculate debt paid off
+  // Calculate debt paid off (with conversion)
   const debtPaidOff = useMemo(() => {
-    const totalPrincipal = liabilities.reduce((sum, l) => sum + l.principal_amount, 0)
+    const totalPrincipal = liabilities.reduce((sum, l) => sum + getConvertedPrincipal(l), 0)
     const paid = totalPrincipal - totalLiabilities
     const percent = totalPrincipal > 0 ? (paid / totalPrincipal) * 100 : 0
     return { paid, percent }
-  }, [liabilities, totalLiabilities])
+  }, [liabilities, totalLiabilities, getConvertedPrincipal])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -338,6 +359,19 @@ export default function LiabilitiesManager() {
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
+                  <select
+                    value={formData.currency}
+                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white"
+                  >
+                    {CURRENCIES.map(c => (
+                      <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Original Amount</label>
@@ -414,7 +448,12 @@ export default function LiabilitiesManager() {
               {liabilities.map(liability => {
                 const typeInfo = LIABILITY_TYPES.find(t => t.value === liability.type)
                 const TypeIcon = typeInfo?.icon || FileText
-                const paidPercent = ((liability.principal_amount - liability.current_balance) / liability.principal_amount) * 100
+                const convertedBalance = getConvertedBalance(liability)
+                const convertedPrincipal = getConvertedPrincipal(liability)
+                const convertedPayment = getConvertedPayment(liability)
+                const paidPercent = ((convertedPrincipal - convertedBalance) / convertedPrincipal) * 100
+                const isDifferentCurrency = liability.currency !== currency.code
+                const liabilityCurrencyInfo = CURRENCIES.find(c => c.code === liability.currency)
 
                 return (
                   <div key={liability.id} className="p-4 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
@@ -442,10 +481,15 @@ export default function LiabilitiesManager() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-red-600 dark:text-red-400">{formatAmount(liability.current_balance)}</p>
-                        {liability.minimum_payment && (
+                        <p className="font-bold text-red-600 dark:text-red-400">{formatAmount(convertedBalance)}</p>
+                        {isDifferentCurrency && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400">
+                            {liabilityCurrencyInfo?.symbol}{liability.current_balance.toLocaleString()} {liability.currency}
+                          </p>
+                        )}
+                        {convertedPayment && (
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatAmount(liability.minimum_payment)}/mo
+                            {formatAmount(convertedPayment)}/mo
                           </p>
                         )}
                       </div>
