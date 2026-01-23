@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { EXPENSE_CATEGORIES, PAYMENT_METHODS, RECURRENCE_FREQUENCIES, COMMON_TAGS, ExpenseFormData } from '../types/expense'
-import { Save, X, Plus } from 'lucide-react'
+import { Save, X, Plus, CreditCard, ArrowRight } from 'lucide-react'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
+import { Liability } from '../types/finance'
+import { getActiveDebtLiabilities, processDebtPayment } from '../utils/integrationService'
 
 interface ExpenseFormProps {
   onSubmit: (data: ExpenseFormData) => Promise<void>
@@ -11,7 +13,7 @@ interface ExpenseFormProps {
 }
 
 export default function ExpenseForm({ onSubmit, onCancel, initialData }: ExpenseFormProps) {
-  const { currency } = useCurrency()
+  const { currency, formatAmount } = useCurrency()
   const { settings } = useSettings()
   const [formData, setFormData] = useState<ExpenseFormData>(
     initialData || {
@@ -24,17 +26,59 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
       receipt_url: '',
       is_recurring: false,
       recurrence_frequency: '',
-      recurrence_end_date: ''
+      recurrence_end_date: '',
+      linked_liability_id: '',
+      linked_liability_name: ''
     }
   )
   const [loading, setLoading] = useState(false)
   const [customTag, setCustomTag] = useState('')
+  // Integration: Available liabilities for debt payment linking
+  const [availableLiabilities, setAvailableLiabilities] = useState<Liability[]>([])
+  const [integrationMessage, setIntegrationMessage] = useState<string | null>(null)
+
+  // Load liabilities when component mounts or when category changes to Debt Payment
+  useEffect(() => {
+    if (formData.category === 'Debt Payment') {
+      loadLiabilities()
+    }
+  }, [formData.category])
+
+  const loadLiabilities = async () => {
+    try {
+      const liabilities = await getActiveDebtLiabilities()
+      setAvailableLiabilities(liabilities)
+    } catch (error) {
+      console.error('Error loading liabilities:', error)
+    }
+  }
+
+  // Handle liability selection
+  const handleLiabilitySelect = (liabilityId: string) => {
+    const selectedLiability = availableLiabilities.find(l => l.id === liabilityId)
+    setFormData({
+      ...formData,
+      linked_liability_id: liabilityId,
+      linked_liability_name: selectedLiability?.name || ''
+    })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     try {
       await onSubmit(formData)
+
+      // Integration: Process debt payment if linked to liability
+      if (formData.linked_liability_id && formData.amount) {
+        const amount = parseFloat(formData.amount)
+        const result = await processDebtPayment(formData.linked_liability_id, amount)
+        if (result.success) {
+          setIntegrationMessage(result.message)
+          setTimeout(() => setIntegrationMessage(null), 4000)
+        }
+      }
+
       setFormData({
         amount: '',
         category: '',
@@ -45,7 +89,9 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
         receipt_url: '',
         is_recurring: false,
         recurrence_frequency: '',
-        recurrence_end_date: ''
+        recurrence_end_date: '',
+        linked_liability_id: '',
+        linked_liability_name: ''
       })
     } finally {
       setLoading(false)
@@ -72,12 +118,25 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
   }
 
   return (
-    <div className="group relative animate-fade-in">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
-      <form onSubmit={handleSubmit} className="relative p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl">
-        <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-6 sm:mb-8">
-          {initialData ? 'Edit Expense' : 'Add New Expense'}
-        </h2>
+    <div className="space-y-4">
+      {/* Integration success message */}
+      {integrationMessage && (
+        <div className="p-4 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
+              <CreditCard size={16} className="text-green-600 dark:text-green-400" />
+            </div>
+            <p className="text-green-700 dark:text-green-300 font-medium">{integrationMessage}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="group relative animate-fade-in">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
+        <form onSubmit={handleSubmit} className="relative p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl">
+          <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-6 sm:mb-8">
+            {initialData ? 'Edit Expense' : 'Add New Expense'}
+          </h2>
 
         <div className="space-y-4 sm:space-y-6">
           <div className="transform transition-all duration-200 hover:scale-[1.02]">
@@ -119,6 +178,41 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
               ))}
             </select>
           </div>
+
+          {/* Integration: Liability selector for Debt Payment category */}
+          {formData.category === 'Debt Payment' && (
+            <div className="transform transition-all duration-200 hover:scale-[1.02]">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <div className="flex items-center gap-2">
+                  <CreditCard size={16} className="text-red-500" />
+                  Pay Which Debt?
+                </div>
+              </label>
+              <select
+                value={formData.linked_liability_id || ''}
+                onChange={(e) => handleLiabilitySelect(e.target.value)}
+                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+              >
+                <option value="">Select a debt to pay</option>
+                {availableLiabilities.map((liability) => (
+                  <option key={liability.id} value={liability.id}>
+                    {liability.name} - Balance: {formatAmount(liability.current_balance)}
+                  </option>
+                ))}
+              </select>
+              {formData.linked_liability_id && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <ArrowRight size={14} />
+                  This payment will reduce {formData.linked_liability_name}'s balance
+                </p>
+              )}
+              {availableLiabilities.length === 0 && (
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  No active debts found. Add a liability in Liabilities Manager first.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="transform transition-all duration-200 hover:scale-[1.02]">
             <label htmlFor="date" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -320,7 +414,8 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
             )}
           </div>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   )
 }

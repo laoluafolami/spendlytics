@@ -12,6 +12,9 @@ export interface Expense {
   is_recurring?: boolean
   recurrence_frequency?: string
   recurrence_end_date?: string
+  // Integration: Link to liability for debt payments
+  linked_liability_id?: string
+  linked_liability_name?: string // Denormalized for display
 }
 
 export interface ExpenseFormData {
@@ -25,6 +28,9 @@ export interface ExpenseFormData {
   is_recurring?: boolean
   recurrence_frequency?: string
   recurrence_end_date?: string
+  // Integration: Link to liability for debt payments
+  linked_liability_id?: string
+  linked_liability_name?: string
 }
 
 export interface Budget {
@@ -44,6 +50,10 @@ export interface Income {
   category: string
   date: string
   created_at: string
+  currency?: string
+  // Integration: Link to asset for automatic balance updates
+  linked_asset_id?: string
+  linked_asset_name?: string // Denormalized for display
 }
 
 export interface SavingsGoal {
@@ -54,6 +64,9 @@ export interface SavingsGoal {
   deadline?: string
   created_at: string
   updated_at: string
+  // Integration: Link to asset for balance tracking
+  linked_asset_id?: string
+  linked_asset_name?: string // Denormalized for display
 }
 
 export interface FilterPreset {
@@ -79,6 +92,7 @@ export const EXPENSE_CATEGORIES = [
   'Recharge Card',
   'Gift',
   'Contribution',
+  'Debt Payment', // Integration: Triggers liability linking
   'Other'
 ] as const
 

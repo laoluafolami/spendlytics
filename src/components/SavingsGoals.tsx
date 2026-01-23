@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Target, Edit2, Trash2, X, TrendingUp, Calendar, Zap, PiggyBank, Clock, Award, AlertCircle, CheckCircle2, Info, Sparkles, ArrowUpRight, Calculator } from 'lucide-react'
+import { Plus, Target, Edit2, Trash2, X, TrendingUp, Calendar, Zap, PiggyBank, Clock, Award, AlertCircle, CheckCircle2, Info, Sparkles, ArrowUpRight, Calculator, Landmark, Link, RefreshCw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { format, differenceInDays, differenceInMonths, addMonths, addDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
+import { Asset } from '../types/finance'
+import { getSavingsAssets, syncSavingsGoalFromAsset } from '../utils/integrationService'
 
 interface SavingsGoal {
   id: string
@@ -13,6 +15,9 @@ interface SavingsGoal {
   current_amount: number
   deadline: string | null
   created_at?: string
+  // Integration fields
+  linked_asset_id?: string
+  linked_asset_name?: string
 }
 
 // Color palette
@@ -35,12 +40,37 @@ export default function SavingsGoals() {
     name: '',
     target_amount: '',
     current_amount: '0',
-    deadline: ''
+    deadline: '',
+    linked_asset_id: '',
+    linked_asset_name: ''
   })
+  // Integration: Available assets for linking
+  const [availableAssets, setAvailableAssets] = useState<Asset[]>([])
 
   useEffect(() => {
     loadGoals()
+    loadAvailableAssets()
   }, [])
+
+  // Load available savings assets
+  const loadAvailableAssets = async () => {
+    try {
+      const assets = await getSavingsAssets()
+      setAvailableAssets(assets)
+    } catch (error) {
+      console.error('Error loading assets:', error)
+    }
+  }
+
+  // Handle asset selection
+  const handleAssetSelect = (assetId: string) => {
+    const selectedAsset = availableAssets.find(a => a.id === assetId)
+    setFormData({
+      ...formData,
+      linked_asset_id: assetId,
+      linked_asset_name: selectedAsset?.name || ''
+    })
+  }
 
   const loadGoals = async () => {
     if (!user) return
@@ -53,7 +83,25 @@ export default function SavingsGoals() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setGoals(data || [])
+
+      // Integration: Sync linked goals with their asset balances
+      const goalsWithSyncedBalances = await Promise.all(
+        (data || []).map(async (goal) => {
+          if (goal.linked_asset_id) {
+            const syncResult = await syncSavingsGoalFromAsset(goal.id, goal.linked_asset_id)
+            if (syncResult) {
+              return {
+                ...goal,
+                current_amount: syncResult.balance,
+                linked_asset_name: syncResult.assetName
+              }
+            }
+          }
+          return goal
+        })
+      )
+
+      setGoals(goalsWithSyncedBalances)
     } catch (error) {
       console.error('Error loading savings goals:', error)
     } finally {
@@ -71,7 +119,9 @@ export default function SavingsGoals() {
         name: formData.name,
         target_amount: parseFloat(formData.target_amount),
         current_amount: parseFloat(formData.current_amount),
-        deadline: formData.deadline || null
+        deadline: formData.deadline || null,
+        linked_asset_id: formData.linked_asset_id || null,
+        linked_asset_name: formData.linked_asset_name || null
       }
 
       if (editingGoal) {
@@ -120,7 +170,9 @@ export default function SavingsGoals() {
       name: goal.name,
       target_amount: goal.target_amount.toString(),
       current_amount: goal.current_amount.toString(),
-      deadline: goal.deadline || ''
+      deadline: goal.deadline || '',
+      linked_asset_id: goal.linked_asset_id || '',
+      linked_asset_name: goal.linked_asset_name || ''
     })
     setShowForm(true)
   }
@@ -145,7 +197,9 @@ export default function SavingsGoals() {
       name: '',
       target_amount: '',
       current_amount: '0',
-      deadline: ''
+      deadline: '',
+      linked_asset_id: '',
+      linked_asset_name: ''
     })
     setEditingGoal(null)
     setShowForm(false)
@@ -768,6 +822,34 @@ export default function SavingsGoals() {
                   className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
                 />
               </div>
+
+              {/* Integration: Link to Savings Account */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Landmark size={16} className="text-blue-500" />
+                    Link to Savings Account (Optional)
+                  </div>
+                </label>
+                <select
+                  value={formData.linked_asset_id}
+                  onChange={(e) => handleAssetSelect(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                >
+                  <option value="">Don't link to account</option>
+                  {availableAssets.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.name} ({formatAmount(asset.value)})
+                    </option>
+                  ))}
+                </select>
+                {formData.linked_asset_id && (
+                  <p className="mt-2 text-sm text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                    <Link size={14} />
+                    Goal progress will track {formData.linked_asset_name}'s balance
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-3 mt-6">
@@ -823,6 +905,13 @@ export default function SavingsGoals() {
                         </span>
                       )}
                     </div>
+                    {goal.linked_asset_id && (
+                      <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 mb-1">
+                        <Link size={12} />
+                        <Landmark size={12} />
+                        <span>{goal.linked_asset_name || 'Linked Account'}</span>
+                      </div>
+                    )}
                     {goal.deadline && (
                       <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <Calendar size={14} />
@@ -949,18 +1038,30 @@ export default function SavingsGoals() {
 
                   {!goal.isCompleted && (
                     <div className="flex gap-2 mt-4">
-                      <button
-                        onClick={() => {
-                          const amount = prompt('Add to savings amount:', '0')
-                          if (amount && !isNaN(parseFloat(amount))) {
-                            handleUpdateProgress(goal.id, goal.current_amount + parseFloat(amount))
-                          }
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-lg text-sm font-medium transition-all"
-                      >
-                        <ArrowUpRight size={14} />
-                        Add Funds
-                      </button>
+                      {goal.linked_asset_id ? (
+                        // Linked goal: Show sync indicator and refresh button
+                        <button
+                          onClick={() => loadGoals()}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium transition-all"
+                        >
+                          <RefreshCw size={14} />
+                          Sync from Account
+                        </button>
+                      ) : (
+                        // Non-linked goal: Show add funds button
+                        <button
+                          onClick={() => {
+                            const amount = prompt('Add to savings amount:', '0')
+                            if (amount && !isNaN(parseFloat(amount))) {
+                              handleUpdateProgress(goal.id, goal.current_amount + parseFloat(amount))
+                            }
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-lg text-sm font-medium transition-all"
+                        >
+                          <ArrowUpRight size={14} />
+                          Add Funds
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

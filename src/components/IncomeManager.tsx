@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Plus, TrendingUp, Edit2, Trash2, Calendar, DollarSign, X } from 'lucide-react'
+import { Plus, TrendingUp, Edit2, Trash2, Calendar, DollarSign, X, Landmark, ArrowRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { useCurrency } from '../contexts/CurrencyContext'
+import { useCurrency, CURRENCIES } from '../contexts/CurrencyContext'
 import { format } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
+import { Asset } from '../types/finance'
+import { getLiquidAssets, processIncomeWithAsset, reverseIncomeAssetLink } from '../utils/integrationService'
 
 interface Income {
   id: string
@@ -11,13 +13,17 @@ interface Income {
   amount: number
   category: string
   date: string
+  currency?: string
   created_at?: string
+  // Integration fields
+  linked_asset_id?: string
+  linked_asset_name?: string
 }
 
-const INCOME_CATEGORIES = ['Salary', 'Freelance', 'Investment', 'Bonus', 'Gift', 'Other']
+const INCOME_CATEGORIES = ['Salary', 'Freelance', 'Investment', 'Dividends', 'Bonus', 'Rental', 'Gift', 'Other']
 
 export default function IncomeManager() {
-  const { formatAmount } = useCurrency()
+  const { formatAmount, currency, convertAmountSync } = useCurrency()
   const { user } = useAuth()
   const [incomes, setIncomes] = useState<Income[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,12 +33,36 @@ export default function IncomeManager() {
     description: '',
     amount: '',
     category: 'Salary',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    currency: currency.code,
+    linked_asset_id: '',
+    linked_asset_name: ''
   })
+  // Integration: Available assets for linking
+  const [availableAssets, setAvailableAssets] = useState<Asset[]>([])
+  const [integrationMessage, setIntegrationMessage] = useState<string | null>(null)
+
+  // Helper to convert income to display currency
+  const getConvertedAmount = (income: Income) => {
+    const incomeCurrency = income.currency || currency.code
+    if (incomeCurrency === currency.code) return income.amount
+    return convertAmountSync(income.amount, incomeCurrency, currency.code)
+  }
 
   useEffect(() => {
     loadIncomes()
+    loadAvailableAssets()
   }, [])
+
+  // Load available assets for linking
+  const loadAvailableAssets = async () => {
+    try {
+      const assets = await getLiquidAssets()
+      setAvailableAssets(assets)
+    } catch (error) {
+      console.error('Error loading assets:', error)
+    }
+  }
 
   const loadIncomes = async () => {
     if (!user) return
@@ -58,27 +88,61 @@ export default function IncomeManager() {
     if (!user) return
 
     try {
+      const amount = parseFloat(formData.amount)
       const incomeData = {
         user_id: user.id,
         description: formData.description,
-        amount: parseFloat(formData.amount),
+        amount: amount,
         category: formData.category,
-        date: formData.date
+        date: formData.date,
+        currency: formData.currency,
+        linked_asset_id: formData.linked_asset_id || null,
+        linked_asset_name: formData.linked_asset_name || null
       }
 
       if (editingIncome) {
+        // Handle asset link changes when editing
+        const oldLinkedAsset = editingIncome.linked_asset_id
+        const newLinkedAsset = formData.linked_asset_id
+        const oldAmount = editingIncome.amount
+
+        // If old link exists and is being changed/removed, reverse the old credit
+        if (oldLinkedAsset && oldLinkedAsset !== newLinkedAsset) {
+          await reverseIncomeAssetLink(oldLinkedAsset, oldAmount)
+        }
+
         const { error } = await supabase
           .from('app_income')
           .update(incomeData)
           .eq('id', editingIncome.id)
 
         if (error) throw error
+
+        // If new link exists, credit the new asset
+        if (newLinkedAsset) {
+          const result = await processIncomeWithAsset(newLinkedAsset, amount, formData.currency)
+          if (result.success) {
+            setIntegrationMessage(result.message)
+            setTimeout(() => setIntegrationMessage(null), 3000)
+          }
+        }
       } else {
         const { error } = await supabase
           .from('app_income')
           .insert([incomeData])
 
         if (error) throw error
+
+        // Integration: Credit linked asset if selected
+        if (formData.linked_asset_id) {
+          const result = await processIncomeWithAsset(formData.linked_asset_id, amount, formData.currency)
+          if (result.success) {
+            setIntegrationMessage(result.message)
+            setTimeout(() => setIntegrationMessage(null), 3000)
+            // Refresh assets list
+            loadAvailableAssets()
+          }
+        }
       }
 
       await loadIncomes()
@@ -93,12 +157,22 @@ export default function IncomeManager() {
     if (!confirm('Are you sure you want to delete this income?')) return
 
     try {
+      // Find the income to check for linked asset
+      const incomeToDelete = incomes.find(inc => inc.id === id)
+
       const { error } = await supabase
         .from('app_income')
         .delete()
         .eq('id', id)
 
       if (error) throw error
+
+      // Integration: Reverse asset credit if linked
+      if (incomeToDelete?.linked_asset_id) {
+        await reverseIncomeAssetLink(incomeToDelete.linked_asset_id, incomeToDelete.amount)
+        loadAvailableAssets()
+      }
+
       await loadIncomes()
     } catch (error) {
       console.error('Error deleting income:', error)
@@ -112,7 +186,10 @@ export default function IncomeManager() {
       description: income.description,
       amount: income.amount.toString(),
       category: income.category,
-      date: income.date
+      date: income.date,
+      currency: income.currency || currency.code,
+      linked_asset_id: income.linked_asset_id || '',
+      linked_asset_name: income.linked_asset_name || ''
     })
     setShowForm(true)
   }
@@ -122,13 +199,27 @@ export default function IncomeManager() {
       description: '',
       amount: '',
       category: 'Salary',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      currency: currency.code,
+      linked_asset_id: '',
+      linked_asset_name: ''
     })
     setEditingIncome(null)
     setShowForm(false)
   }
 
-  const totalIncome = incomes.reduce((sum, inc) => sum + parseFloat(inc.amount.toString()), 0)
+  // Handle asset selection in dropdown
+  const handleAssetSelect = (assetId: string) => {
+    const selectedAsset = availableAssets.find(a => a.id === assetId)
+    setFormData({
+      ...formData,
+      linked_asset_id: assetId,
+      linked_asset_name: selectedAsset?.name || ''
+    })
+  }
+
+  // Total income converted to display currency
+  const totalIncome = incomes.reduce((sum, inc) => sum + getConvertedAmount(inc), 0)
 
   if (loading) {
     return (
@@ -205,20 +296,36 @@ export default function IncomeManager() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Amount
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
-                  placeholder="0.00"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Amount
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Currency
+                  </label>
+                  <select
+                    value={formData.currency}
+                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                  >
+                    {CURRENCIES.map(c => (
+                      <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -248,6 +355,34 @@ export default function IncomeManager() {
                   className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
                 />
               </div>
+
+              {/* Integration: Deposit to Account */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Landmark size={16} className="text-blue-500" />
+                    Deposit to Account (Optional)
+                  </div>
+                </label>
+                <select
+                  value={formData.linked_asset_id}
+                  onChange={(e) => handleAssetSelect(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                >
+                  <option value="">Don't link to account</option>
+                  {availableAssets.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.name} ({formatAmount(asset.value)})
+                    </option>
+                  ))}
+                </select>
+                {formData.linked_asset_id && (
+                  <p className="mt-2 text-sm text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                    <ArrowRight size={14} />
+                    This income will be added to {formData.linked_asset_name}'s balance
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-3 mt-6">
@@ -266,6 +401,18 @@ export default function IncomeManager() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Integration success message */}
+      {integrationMessage && (
+        <div className="p-4 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
+              <Landmark size={16} className="text-green-600 dark:text-green-400" />
+            </div>
+            <p className="text-green-700 dark:text-green-300 font-medium">{integrationMessage}</p>
+          </div>
         </div>
       )}
 
@@ -300,47 +447,68 @@ export default function IncomeManager() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
-                  {incomes.map((income) => (
-                    <tr key={income.id} className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={14} className="text-gray-400" />
-                          {format(new Date(income.date), 'MMM dd, yyyy')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                        {income.description}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 dark:text-green-300 border border-green-200/50 dark:border-green-700/50">
-                          {income.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
-                        <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
-                          {formatAmount(parseFloat(income.amount.toString()))}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleEdit(income)}
-                            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all"
-                            title="Edit income"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(income.id)}
-                            className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transform hover:scale-110 transition-all"
-                            title="Delete income"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {incomes.map((income) => {
+                    const incomeCurrency = income.currency || currency.code
+                    const isDifferentCurrency = incomeCurrency !== currency.code
+                    const convertedAmount = getConvertedAmount(income)
+                    const incomeCurrencyInfo = CURRENCIES.find(c => c.code === incomeCurrency)
+
+                    return (
+                      <tr key={income.id} className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="flex items-center gap-2">
+                            <Calendar size={14} className="text-gray-400" />
+                            {format(new Date(income.date), 'MMM dd, yyyy')}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                          <div>
+                            {income.description}
+                            {income.linked_asset_id && (
+                              <div className="flex items-center gap-1 mt-1 text-xs text-blue-600 dark:text-blue-400">
+                                <ArrowRight size={12} />
+                                <Landmark size={12} />
+                                <span>{income.linked_asset_name || 'Linked Account'}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 dark:text-green-300 border border-green-200/50 dark:border-green-700/50">
+                            {income.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
+                          <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                            {formatAmount(convertedAmount)}
+                          </span>
+                          {isDifferentCurrency && (
+                            <p className="text-xs text-blue-600 dark:text-blue-400 font-normal">
+                              {incomeCurrencyInfo?.symbol}{income.amount.toLocaleString()} {incomeCurrency}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleEdit(income)}
+                              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all"
+                              title="Edit income"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(income.id)}
+                              className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transform hover:scale-110 transition-all"
+                              title="Delete income"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
