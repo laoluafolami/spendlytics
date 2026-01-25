@@ -157,16 +157,16 @@ export default function IncomeManager() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+          <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
             Income Tracking
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Track your income sources</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base">Track your income sources</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg w-full sm:w-auto"
         >
           <Plus size={18} />
           Add Income
@@ -311,84 +311,144 @@ export default function IncomeManager() {
               <p className="text-gray-600 dark:text-gray-400">No income entries yet. Add your first income!</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
-                  {incomes.map((income) => {
-                    const incomeCurrency = income.currency || currency.code
-                    const isDifferentCurrency = incomeCurrency !== currency.code
-                    const convertedAmount = getConvertedAmount(income)
-                    const incomeCurrencyInfo = CURRENCIES.find(c => c.code === incomeCurrency)
+            <>
+              {/* Mobile Card Layout */}
+              <div className="block md:hidden divide-y divide-gray-200/30 dark:divide-gray-700/30">
+                {incomes.map((income) => {
+                  const incomeCurrency = income.currency || currency.code
+                  const isDifferentCurrency = incomeCurrency !== currency.code
+                  const convertedAmount = getConvertedAmount(income)
+                  const incomeCurrencyInfo = CURRENCIES.find(c => c.code === incomeCurrency)
 
-                    return (
-                      <tr key={income.id} className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={14} className="text-gray-400" />
-                            {format(new Date(income.date), 'MMM dd, yyyy')}
+                  return (
+                    <div key={income.id} className="p-4 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">
+                            {income.description}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 dark:text-green-300">
+                              {income.category}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                              <Calendar size={12} />
+                              {format(new Date(income.date), 'MMM dd, yyyy')}
+                            </span>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                          {income.description}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 dark:text-green-300 border border-green-200/50 dark:border-green-700/50">
-                            {income.category}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
-                          <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-bold text-lg bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
                             {formatAmount(convertedAmount)}
-                          </span>
+                          </p>
                           {isDifferentCurrency && (
-                            <p className="text-xs text-blue-600 dark:text-blue-400 font-normal">
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
                               {incomeCurrencyInfo?.symbol}{income.amount.toLocaleString()} {incomeCurrency}
                             </p>
                           )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleEdit(income)}
-                              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all"
-                              title="Edit income"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(income.id)}
-                              className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transform hover:scale-110 transition-all"
-                              title="Delete income"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-200/30 dark:border-gray-700/30">
+                        <button
+                          onClick={() => handleEdit(income)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-all"
+                        >
+                          <Edit2 size={14} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(income.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium transition-all"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Desktop Table Layout */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Category
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
+                    {incomes.map((income) => {
+                      const incomeCurrency = income.currency || currency.code
+                      const isDifferentCurrency = incomeCurrency !== currency.code
+                      const convertedAmount = getConvertedAmount(income)
+                      const incomeCurrencyInfo = CURRENCIES.find(c => c.code === incomeCurrency)
+
+                      return (
+                        <tr key={income.id} className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} className="text-gray-400" />
+                              {format(new Date(income.date), 'MMM dd, yyyy')}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                            {income.description}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 dark:text-green-300 border border-green-200/50 dark:border-green-700/50">
+                              {income.category}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
+                            <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                              {formatAmount(convertedAmount)}
+                            </span>
+                            {isDifferentCurrency && (
+                              <p className="text-xs text-blue-600 dark:text-blue-400 font-normal">
+                                {incomeCurrencyInfo?.symbol}{income.amount.toLocaleString()} {incomeCurrency}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleEdit(income)}
+                                className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all"
+                                title="Edit income"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(income.id)}
+                                className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transform hover:scale-110 transition-all"
+                                title="Delete income"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -380,119 +380,205 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
               <p className="text-gray-600 dark:text-gray-400">No expenses found. {hasActiveFilters ? 'Try adjusting your filters.' : 'Add your first expense!'}</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-pink-600/20 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Category
-                    </th>
-                    {settings.feature_payment_methods && (
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        Payment
-                      </th>
-                    )}
-                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
-                  {filteredExpenses.map((expense) => (
-                    <tr key={expense.id} className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={14} className="text-gray-400" />
-                          {format(new Date(expense.date), 'MMM dd, yyyy')}
+            <>
+              {/* Mobile Card Layout */}
+              <div className="block md:hidden divide-y divide-gray-200/30 dark:divide-gray-700/30">
+                {filteredExpenses.map((expense) => (
+                  <div key={expense.id} className="p-4 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white truncate">
+                          {expense.description || expense.category}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-700 dark:text-blue-300">
+                            {expense.category}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <Calendar size={12} />
+                            {format(new Date(expense.date), 'MMM dd, yyyy')}
+                          </span>
                           {settings.feature_recurring && expense.is_recurring && (
-                            <span title="Recurring expense">
-                              <Repeat size={14} className="text-blue-500" />
-                            </span>
+                            <Repeat size={12} className="text-blue-500" />
                           )}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                        <div className="space-y-1">
-                          <div>{expense.description || '-'}</div>
-                          {settings.feature_tags && expense.tags && expense.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {expense.tags.map((tag, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {settings.feature_receipts && expense.receipt_url && (
-                            <a
-                              href={expense.receipt_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                              <Receipt size={12} />
-                              View Receipt
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500/20 to-purple-500/20 dark:from-blue-600/30 dark:to-purple-600/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50">
-                          {expense.category}
-                        </span>
-                      </td>
-                      {settings.feature_payment_methods && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                        {settings.feature_payment_methods && expense.payment_method && (
+                          <div className="flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
                             <CreditCard size={12} />
-                            {expense.payment_method || 'Cash'}
+                            {expense.payment_method}
+                          </div>
+                        )}
+                        {settings.feature_tags && expense.tags && expense.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {expense.tags.map((tag, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-bold text-lg bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-400 dark:to-orange-400 bg-clip-text text-transparent">
+                          {formatAmount(parseFloat(expense.amount.toString()))}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-200/30 dark:border-gray-700/30">
+                      {settings.feature_receipts && expense.receipt_url && (
+                        <a
+                          href={expense.receipt_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400"
+                        >
+                          <Receipt size={14} />
+                          View Receipt
+                        </a>
+                      )}
+                      <div className="flex items-center gap-2 ml-auto">
+                        <button
+                          onClick={() => onEdit(expense)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-all"
+                        >
+                          <Edit2 size={14} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this expense?')) {
+                              onDelete(expense.id)
+                            }
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium transition-all"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table Layout */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-blue-600/20 dark:via-purple-600/20 dark:to-pink-600/20 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Category
+                      </th>
+                      {settings.feature_payment_methods && (
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                          Payment
+                        </th>
+                      )}
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
+                    {filteredExpenses.map((expense) => (
+                      <tr key={expense.id} className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="flex items-center gap-2">
+                            <Calendar size={14} className="text-gray-400" />
+                            {format(new Date(expense.date), 'MMM dd, yyyy')}
+                            {settings.feature_recurring && expense.is_recurring && (
+                              <span title="Recurring expense">
+                                <Repeat size={14} className="text-blue-500" />
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                          <div className="space-y-1">
+                            <div>{expense.description || '-'}</div>
+                            {settings.feature_tags && expense.tags && expense.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {expense.tags.map((tag, index) => (
+                                  <span
+                                    key={index}
+                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {settings.feature_receipts && expense.receipt_url && (
+                              <a
+                                href={expense.receipt_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                <Receipt size={12} />
+                                View Receipt
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500/20 to-purple-500/20 dark:from-blue-600/30 dark:to-purple-600/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50">
+                            {expense.category}
                           </span>
                         </td>
-                      )}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
-                        <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
-                          {formatAmount(parseFloat(expense.amount.toString()))}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => onEdit(expense)}
-                            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all"
-                            title="Edit expense"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm('Are you sure you want to delete this expense?')) {
-                                onDelete(expense.id)
-                              }
-                            }}
-                            className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transform hover:scale-110 transition-all"
-                            title="Delete expense"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        {settings.feature_payment_methods && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                              <CreditCard size={12} />
+                              {expense.payment_method || 'Cash'}
+                            </span>
+                          </td>
+                        )}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
+                          <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                            {formatAmount(parseFloat(expense.amount.toString()))}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => onEdit(expense)}
+                              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transform hover:scale-110 transition-all"
+                              title="Edit expense"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete this expense?')) {
+                                  onDelete(expense.id)
+                                }
+                              }}
+                              className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transform hover:scale-110 transition-all"
+                              title="Delete expense"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>
