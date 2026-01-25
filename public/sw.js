@@ -1,9 +1,10 @@
 /**
- * WealthPulse Service Worker v4.0
+ * WealthPulse Service Worker v5.0
  * Advanced PWA with offline support, background sync, and seamless share handling
+ * v5: Aggressive cache clearing and instant updates
  */
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5.1';
 const STATIC_CACHE = `wealthpulse-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `wealthpulse-dynamic-${CACHE_VERSION}`;
 const SHARE_CACHE = `wealthpulse-share-${CACHE_VERSION}`;
@@ -27,12 +28,23 @@ const CACHE_LIMITS = {
   images: 50
 };
 
-// Install event - pre-cache static assets
+// Install event - pre-cache static assets and immediately activate
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v4...');
+  console.log('[SW] Installing service worker v5...');
 
   event.waitUntil(
-    caches.open(STATIC_CACHE)
+    // First, delete ALL old caches to ensure clean slate
+    caches.keys()
+      .then((cacheNames) => {
+        console.log('[SW] Clearing all old caches before install...');
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            console.log('[SW] Deleting cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      })
+      .then(() => caches.open(STATIC_CACHE))
       .then((cache) => {
         console.log('[SW] Pre-caching static assets');
         return cache.addAll(STATIC_ASSETS).catch((err) => {
@@ -42,15 +54,15 @@ self.addEventListener('install', (event) => {
         });
       })
       .then(() => {
-        console.log('[SW] Skip waiting');
+        console.log('[SW] Skip waiting - activating immediately');
         return self.skipWaiting();
       })
   );
 });
 
-// Activate event - clean old caches and take control
+// Activate event - clean old caches, take control, and force reload all clients
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v4...');
+  console.log('[SW] Activating service worker v5...');
 
   const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, SHARE_CACHE, IMAGE_CACHE];
 
@@ -69,6 +81,19 @@ self.addEventListener('activate', (event) => {
       .then(() => {
         console.log('[SW] Claiming clients');
         return self.clients.claim();
+      })
+      .then(() => {
+        // Notify all clients that an update has occurred
+        return self.clients.matchAll({ type: 'window' });
+      })
+      .then((clients) => {
+        console.log('[SW] Notifying', clients.length, 'clients of update');
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'SW_UPDATED',
+            version: CACHE_VERSION
+          });
+        });
       })
   );
 });
