@@ -71,7 +71,7 @@ export default function Settings() {
   const handleCheckForUpdates = async () => {
     setCheckingForUpdates(true)
     setUpdateStatus('idle')
-    setUpdateMessage(null)
+    setUpdateMessage('Checking for updates...')
 
     try {
       if (!('serviceWorker' in navigator)) {
@@ -80,18 +80,21 @@ export default function Settings() {
         return
       }
 
+      // Clear any cooldown that might block updates
+      localStorage.removeItem('sw_refresh_cooldown')
+
       const registration = await navigator.serviceWorker.getRegistration()
       if (!registration) {
         setUpdateStatus('error')
-        setUpdateMessage('No service worker registered')
+        setUpdateMessage('No service worker registered. Try "Force Refresh" below.')
         return
       }
 
       // Force check for updates
       await registration.update()
 
-      // Wait a moment for the update check to complete
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Wait for update check to complete
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Check if there's a waiting worker (new version available)
       if (registration.waiting) {
@@ -99,7 +102,14 @@ export default function Settings() {
         setUpdateMessage('New version available! Tap "Install Update" to update now.')
       } else if (registration.installing) {
         setUpdateStatus('available')
-        setUpdateMessage('Update downloading... It will be ready shortly.')
+        setUpdateMessage('Update downloading... Please wait.')
+        // Listen for install completion
+        registration.installing.addEventListener('statechange', function handler(this: ServiceWorker) {
+          if (this.state === 'installed') {
+            setUpdateMessage('Update ready! Tap "Install Update" to apply.')
+            this.removeEventListener('statechange', handler)
+          }
+        })
       } else {
         setUpdateStatus('up-to-date')
         setUpdateMessage(`You're on the latest version (v${APP_VERSION})`)
@@ -107,9 +117,44 @@ export default function Settings() {
     } catch (error) {
       console.error('Update check error:', error)
       setUpdateStatus('error')
-      setUpdateMessage('Failed to check for updates. Please try again.')
+      setUpdateMessage('Failed to check. Try "Force Refresh" below.')
     } finally {
       setCheckingForUpdates(false)
+    }
+  }
+
+  // Nuclear force refresh - guaranteed to get latest version
+  const handleForceRefresh = async () => {
+    setCheckingForUpdates(true)
+    setUpdateMessage('Force refreshing...')
+
+    try {
+      // 1. Clear cooldown
+      localStorage.removeItem('sw_refresh_cooldown')
+
+      // 2. Unregister all service workers
+      const registrations = await navigator.serviceWorker.getRegistrations()
+      for (const registration of registrations) {
+        await registration.unregister()
+      }
+
+      // 3. Clear all caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys()
+        await Promise.all(cacheNames.map(name => caches.delete(name)))
+      }
+
+      // 4. Set flag for welcome screen
+      sessionStorage.setItem('sw_just_updated', 'true')
+
+      // 5. Force reload with cache bypass
+      const url = new URL(window.location.href)
+      url.searchParams.set('_refresh', Date.now().toString())
+      window.location.replace(url.toString())
+    } catch (error) {
+      console.error('Force refresh error:', error)
+      // Fallback: hard reload
+      window.location.reload()
     }
   }
 
@@ -802,6 +847,21 @@ export default function Settings() {
                       Install Update
                     </button>
                   )}
+                </div>
+
+                {/* Force Refresh - Always works */}
+                <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+                  <button
+                    onClick={handleForceRefresh}
+                    disabled={checkingForUpdates}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-400 text-white rounded-xl font-semibold transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Force Refresh (Guaranteed Update)
+                  </button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                    Clears all caches and reloads the app with the latest version
+                  </p>
                 </div>
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
