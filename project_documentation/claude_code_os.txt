@@ -31,6 +31,8 @@ UX flow: simple mental model for users (“Backup locally”, “Backup to cloud
 ​
 
 Non-functional requirements: performance budgets, scalability targets, security constraints (encryption, auth, rate limits), observability (metrics, logs, traces).
+
+- **Efficiency**: platform loading and page loading must have maximum possible optimization available today - treat as highly sensitive.
 ​
 
 3. Building safely: coding, branching, and tests

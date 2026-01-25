@@ -39,6 +39,7 @@ For every feature/change you must:
   - Existing clients and APIs
   - Data schema and migrations
   - Backup/restore, sync, and offline behavior
+- **Efficiency**: Platform loading and page loading must have maximum possible optimization available today - treat as highly sensitive
 
 **Present design summary before providing code, unless the change is truly trivial.**
 
