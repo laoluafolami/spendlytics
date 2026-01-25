@@ -12,6 +12,8 @@ import {
   MultiParseResult,
   ParsedExpense
 } from '../utils/transactionParser'
+// World-class intelligent receipt parser
+import { parseReceiptVerbose } from '../utils/receiptParser'
 // AI-specific functions still from geminiService
 import { extractExpenseWithGemini, extractExpenseFromTextWithGemini, extractMultipleExpensesWithGemini, getGeminiApiKey, setGeminiApiKey, clearGeminiApiKey } from '../utils/geminiService'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types/expense'
@@ -243,7 +245,60 @@ export default function SmartCapture({ onExpenseAdd, onIncomeAdd, onBatchAdd, on
     setError(null)
 
     try {
-      // Use multi-expense parser
+      // FIRST: Try the intelligent receipt parser to filter phone numbers correctly
+      const receiptResult = parseReceiptVerbose(pasteInput)
+      console.log('[SmartCapture] Paste - Receipt parser debug:', {
+        amount: receiptResult.result.amount,
+        confidence: receiptResult.result.confidence,
+        merchant: receiptResult.result.merchant,
+        filteredPhoneNumbers: receiptResult.debug.filteredPhoneNumbers,
+        filteredReferences: receiptResult.debug.filteredReferences,
+      })
+
+      // If receipt parser found a confident result, use it
+      if (receiptResult.result.amount && receiptResult.result.confidence >= 45) {
+        const parsed: ParsedExpense = {
+          amount: receiptResult.result.amount,
+          merchant: receiptResult.result.merchant,
+          category: receiptResult.result.category,
+          date: receiptResult.result.date,
+          description: receiptResult.result.description || receiptResult.result.merchant || 'Pasted Transaction',
+          confidence: receiptResult.result.confidence,
+          rawText: pasteInput
+        }
+
+        // Set transaction type based on receipt parser detection
+        if (receiptResult.result.transactionType) {
+          setTransactionType(receiptResult.result.transactionType)
+        }
+
+        // Try AI enhancement for low confidence
+        if (parsed.confidence < 70 && useAiFallback) {
+          const apiKey = getGeminiApiKey()
+          if (apiKey) {
+            try {
+              setOcrProgress({ status: 'Enhancing with AI...', progress: 50 })
+              const aiResult = await extractExpenseFromTextWithGemini(pasteInput, apiKey)
+              if (aiResult.confidence > parsed.confidence) {
+                setParsedExpense(aiResult)
+                populateFormFromParsed(aiResult)
+                setShowReview(true)
+                return
+              }
+            } catch {
+              // Fall through to receipt parser result
+            }
+          }
+        }
+
+        setParsedExpense(parsed)
+        populateFormFromParsed(parsed)
+        setShowReview(true)
+        console.log(`[SmartCapture] Paste - Receipt parser found amount: ${receiptResult.result.amount}`)
+        return
+      }
+
+      // SECOND: Use multi-expense parser for lists like "Food 60k, Fuel 40k"
       const multiParsed = parseMultipleExpenses(pasteInput)
 
       if (multiParsed.items.length > 1) {
@@ -395,7 +450,45 @@ export default function SmartCapture({ onExpenseAdd, onIncomeAdd, onBatchAdd, on
         throw new Error(ocrResult.error || 'Could not read text from image. Try adding a Gemini API key for better results.')
       }
 
-      // Try multi-expense parsing from OCR text
+      setOcrProgress({ status: 'Analyzing receipt...', progress: 80 })
+
+      // Use the world-class intelligent receipt parser FIRST
+      // This filters out phone numbers, reference IDs, and correctly identifies amounts
+      const receiptResult = parseReceiptVerbose(ocrResult.text)
+      console.log('[SmartCapture] Receipt parser debug:', {
+        amount: receiptResult.result.amount,
+        confidence: receiptResult.result.confidence,
+        merchant: receiptResult.result.merchant,
+        filteredPhoneNumbers: receiptResult.debug.filteredPhoneNumbers,
+        filteredReferences: receiptResult.debug.filteredReferences,
+        allAmounts: receiptResult.result.allAmounts.slice(0, 5) // Top 5 for debugging
+      })
+
+      // If receipt parser found a high-confidence result, use it
+      if (receiptResult.result.amount && receiptResult.result.confidence >= 40) {
+        const parsed: ParsedExpense = {
+          amount: receiptResult.result.amount,
+          merchant: receiptResult.result.merchant,
+          category: receiptResult.result.category,
+          date: receiptResult.result.date,
+          description: receiptResult.result.description || receiptResult.result.merchant || 'Receipt',
+          confidence: Math.min(receiptResult.result.confidence, ocrResult.confidence),
+          rawText: ocrResult.text
+        }
+
+        // Set transaction type based on receipt parser detection
+        if (receiptResult.result.transactionType) {
+          setTransactionType(receiptResult.result.transactionType)
+        }
+
+        setParsedExpense(parsed)
+        populateFormFromParsed(parsed)
+        setShowReview(true)
+        console.log(`[SmartCapture] Receipt parser found amount: ${receiptResult.result.amount}`)
+        return
+      }
+
+      // Fall back to multi-expense parsing from OCR text
       const multiParsed = parseMultipleExpenses(ocrResult.text)
 
       if (multiParsed.items.length > 1) {

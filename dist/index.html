@@ -2,19 +2,127 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
-    <meta name="description" content="Track your expenses, manage budgets, and gain insights into your spending habits" />
-    <meta name="theme-color" content="#3B82F6" />
+
+    <!-- Primary Meta Tags -->
+    <title>WealthPulse - Smart Finance Tracker</title>
+    <meta name="title" content="WealthPulse - Smart Finance Tracker" />
+    <meta name="description" content="Track your finances, manage budgets, capture receipts with OCR, and gain insights into your spending habits with beautiful analytics." />
+
+    <!-- Viewport & Mobile Optimization -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="format-detection" content="telephone=no" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="HandheldFriendly" content="true" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#3B82F6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1E3A8A" media="(prefers-color-scheme: dark)" />
+    <meta name="msapplication-TileColor" content="#3B82F6" />
+    <meta name="msapplication-navbutton-color" content="#3B82F6" />
+    <meta name="application-name" content="WealthPulse" />
+    <meta name="msapplication-tooltip" content="WealthPulse - Smart Finance Tracker" />
+    <meta name="msapplication-starturl" content="/" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- Apple/iOS Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Expense Tracker" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.svg" />
-    <title>Expense Tracker</title>
-    <script type="module" crossorigin src="/assets/index-CqwpBUar.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DY9GCkLo.css">
+    <meta name="apple-mobile-web-app-title" content="WealthPulse" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+
+    <!-- Social Meta Tags (Open Graph) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="WealthPulse - Smart Finance Tracker" />
+    <meta property="og:description" content="Track your finances, manage budgets, capture receipts with OCR, and gain insights into your spending habits." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:url" content="https://wealthpulse.app" />
+    <meta property="og:site_name" content="WealthPulse" />
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="WealthPulse - Smart Finance Tracker" />
+    <meta name="twitter:description" content="Track your finances, manage budgets, and gain insights into your spending habits." />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon-192.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icon-167.png" />
+
+    <!-- Apple Splash Screens (iPhone) -->
+    <link rel="apple-touch-startup-image" href="/splash/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" />
+
+    <!-- Windows Tiles -->
+    <meta name="msapplication-TileImage" content="/icon-144.png" />
+    <meta name="msapplication-square70x70logo" content="/icon-72.png" />
+    <meta name="msapplication-square150x150logo" content="/icon-152.png" />
+    <meta name="msapplication-wide310x150logo" content="/icon-310x150.png" />
+    <meta name="msapplication-square310x310logo" content="/icon-310.png" />
+
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://supabase.co" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://wealthpulse.app" />
+
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- Color Scheme Support -->
+    <meta name="color-scheme" content="light dark" />
+
+    <style>
+      /* Critical CSS for fast first paint */
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 50%, #fdf2f8 100%);
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #0f172a 100%); }
+      }
+      /* Loading spinner */
+      #root:empty::after {
+        content: '';
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 48px;
+        height: 48px;
+        margin: -24px 0 0 -24px;
+        border: 4px solid rgba(59, 130, 246, 0.2);
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <script type="module" crossorigin src="/assets/index-BO7KbOej.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D9y4NUqL.css">
   </head>
   <body>
     <div id="root"></div>

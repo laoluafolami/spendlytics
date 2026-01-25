@@ -9,19 +9,50 @@ import { AuthProvider } from './contexts/AuthContext'
 import { initSyncService, performFullSync } from './lib/syncService'
 import './index.css'
 
+// Refresh cooldown - prevents infinite reload loops
+const REFRESH_COOLDOWN_MS = 10000 // 10 seconds minimum between refreshes
+const REFRESH_COOLDOWN_KEY = 'sw_refresh_cooldown'
+
+// Check if we're in a cooldown period (just refreshed recently)
+const isInCooldown = (): boolean => {
+  const lastRefresh = localStorage.getItem(REFRESH_COOLDOWN_KEY)
+  if (!lastRefresh) return false
+  const elapsed = Date.now() - parseInt(lastRefresh, 10)
+  return elapsed < REFRESH_COOLDOWN_MS
+}
+
+// Mark that we just refreshed
+const markRefreshTime = () => {
+  localStorage.setItem(REFRESH_COOLDOWN_KEY, Date.now().toString())
+}
+
+// Check if we just came from a force refresh
+const justRefreshed = new URL(window.location.href).searchParams.has('_refresh')
+
 // Clean up refresh parameter from URL if present (from force refresh)
 const cleanRefreshParam = () => {
   const url = new URL(window.location.href)
   if (url.searchParams.has('_refresh')) {
     url.searchParams.delete('_refresh')
     window.history.replaceState({}, '', url.toString())
+    // Mark that we successfully completed a refresh
+    markRefreshTime()
+    // Also set the update flag so we show the welcome screen
+    sessionStorage.setItem('sw_just_updated', 'true')
   }
 }
 cleanRefreshParam()
 
 // Nuclear cache clearing - ensures user sees the latest version
 const forceHardRefresh = async () => {
+  // Prevent infinite refresh loops
+  if (isInCooldown()) {
+    console.log('[Update] Skipping refresh - in cooldown period')
+    return
+  }
+
   console.log('[Update] Starting nuclear cache clear...')
+  markRefreshTime() // Mark immediately to prevent race conditions
 
   try {
     // 1. Clear all Cache Storage caches
@@ -101,7 +132,12 @@ const registerServiceWorker = async () => {
       if (newWorker) {
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // New content available - show notification with auto-update
+            // New content available - show notification
+            // But skip if we just refreshed (prevents infinite loop)
+            if (justRefreshed || isInCooldown()) {
+              console.log('[SW] Skipping update notification - just refreshed')
+              return
+            }
             console.log('[SW] New content available')
             showUpdateNotification(registration, true) // Auto-update enabled
           }
@@ -118,6 +154,11 @@ const registerServiceWorker = async () => {
     // Handle controller change (when new SW takes over)
     let refreshing = false
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      // Skip if we just refreshed (prevents infinite loop)
+      if (justRefreshed || isInCooldown()) {
+        console.log('[SW] Skipping controller change refresh - in cooldown')
+        return
+      }
       if (!refreshing) {
         refreshing = true
         console.log('[SW] Controller changed, forcing hard refresh...')
@@ -147,6 +188,11 @@ const registerServiceWorker = async () => {
 
       // Handle SW_UPDATED message - force nuclear refresh
       if (event.data && event.data.type === 'SW_UPDATED') {
+        // Skip if we just refreshed (prevents infinite loop)
+        if (justRefreshed || isInCooldown()) {
+          console.log('[SW] Skipping SW_UPDATED refresh - in cooldown')
+          return
+        }
         console.log('[SW] Service worker updated to', event.data.version, '- forcing refresh')
         if (!refreshing) {
           refreshing = true
