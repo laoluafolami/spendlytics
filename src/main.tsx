@@ -100,6 +100,18 @@ const registerServiceWorker = async () => {
   }
 }
 
+// Update changelog - edit this when releasing new versions
+const UPDATE_CHANGELOG = {
+  version: '5.2',
+  title: 'Smart Capture Upgrade',
+  highlights: [
+    { icon: '📷', text: 'Better receipt scanning accuracy' },
+    { icon: '💰', text: 'Add income directly from captures' },
+    { icon: '🏷️', text: 'Create custom categories on-the-fly' },
+    { icon: '📱', text: 'Improved mobile experience' },
+  ]
+}
+
 // Show success toast after update
 const showUpdateSuccessToast = () => {
   const toast = document.createElement('div')
@@ -109,39 +121,62 @@ const showUpdateSuccessToast = () => {
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
       color: white;
-      padding: 12px 24px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+      padding: 14px 24px;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(30, 27, 75, 0.5);
       z-index: 10000;
-      font-size: 14px;
-      font-weight: 500;
-      animation: slideDown 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1), toastOut 0.3s ease 3.7s forwards;
     ">
-      ✓ App updated to latest version!
+      <div style="
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, #22d3ee 0%, #10b981 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      ">✓</div>
+      <div>
+        <p style="margin: 0; font-weight: 600; font-size: 14px;">Updated to v${UPDATE_CHANGELOG.version}!</p>
+        <p style="margin: 2px 0 0; font-size: 12px; opacity: 0.7;">${UPDATE_CHANGELOG.title}</p>
+      </div>
     </div>
     <style>
-      @keyframes slideDown {
-        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
-        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      @keyframes toastIn {
+        from { transform: translateX(-50%) translateY(-100%) scale(0.9); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
       }
-      @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
+      @keyframes toastOut {
+        from { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+        to { transform: translateX(-50%) translateY(-20px) scale(0.95); opacity: 0; }
       }
     </style>
   `
   document.body.appendChild(toast)
-  setTimeout(() => toast.remove(), 3000)
+  setTimeout(() => toast.remove(), 4000)
 }
 
-// Show update notification with optional auto-update countdown
+// Show world-class update notification with changelog
 const showUpdateNotification = (registration: ServiceWorkerRegistration, autoUpdate = false) => {
   // Remove any existing notification
   document.getElementById('sw-update-notification')?.remove()
 
-  const AUTO_UPDATE_SECONDS = 5 // Auto-update after 5 seconds
+  const AUTO_UPDATE_SECONDS = 8 // Give users time to read the changelog
+
+  // Create highlights HTML
+  const highlightsHTML = UPDATE_CHANGELOG.highlights
+    .map(h => `
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0;">
+        <span style="font-size: 18px;">${h.icon}</span>
+        <span style="font-size: 13px; color: rgba(255,255,255,0.95);">${h.text}</span>
+      </div>
+    `).join('')
 
   // Create a notification element
   const notification = document.createElement('div')
@@ -149,58 +184,140 @@ const showUpdateNotification = (registration: ServiceWorkerRegistration, autoUpd
   notification.innerHTML = `
     <div style="
       position: fixed;
-      bottom: 80px;
-      left: 16px;
-      right: 16px;
-      max-width: 400px;
-      margin: 0 auto;
-      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
       color: white;
-      padding: 16px;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
       z-index: 10000;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      animation: slideUp 0.3s ease;
+      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.3);
     ">
-      <div style="flex: 1;">
-        <p style="margin: 0; font-weight: 600; font-size: 14px;">New version available!</p>
-        <p id="sw-update-subtext" style="margin: 4px 0 0; font-size: 12px; opacity: 0.9;">
-          ${autoUpdate ? `Updating in <span id="sw-countdown">${AUTO_UPDATE_SECONDS}</span>s...` : 'Tap update for the latest features.'}
-        </p>
-      </div>
-      <button id="sw-update-btn" style="
-        background: white;
-        color: #3b82f6;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 10px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        white-space: nowrap;
-      ">Update Now</button>
-      <button id="sw-dismiss-btn" style="
+      <!-- Progress bar -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
         background: rgba(255,255,255,0.2);
-        color: white;
-        border: none;
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        font-size: 18px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">&times;</button>
+        border-top-left-radius: 24px;
+        border-top-right-radius: 24px;
+        overflow: hidden;
+      ">
+        <div id="sw-progress-bar" style="
+          height: 100%;
+          background: linear-gradient(90deg, #22d3ee, #a855f7, #ec4899);
+          width: 100%;
+          animation: ${autoUpdate ? `progressShrink ${AUTO_UPDATE_SECONDS}s linear forwards` : 'none'};
+        "></div>
+      </div>
+
+      <!-- Handle bar -->
+      <div style="
+        width: 40px;
+        height: 4px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 2px;
+        margin: 12px auto 0;
+      "></div>
+
+      <!-- Content -->
+      <div style="padding: 16px 20px 24px;">
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="
+              width: 40px;
+              height: 40px;
+              background: linear-gradient(135deg, #22d3ee 0%, #a855f7 100%);
+              border-radius: 12px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 20px;
+            ">✨</div>
+            <div>
+              <p style="margin: 0; font-weight: 700; font-size: 16px;">New Update Available!</p>
+              <p style="margin: 2px 0 0; font-size: 12px; opacity: 0.7;">v${UPDATE_CHANGELOG.version} · ${UPDATE_CHANGELOG.title}</p>
+            </div>
+          </div>
+          <button id="sw-dismiss-btn" style="
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+          ">✕</button>
+        </div>
+
+        <!-- What's new section -->
+        <div style="
+          background: rgba(255,255,255,0.08);
+          border-radius: 16px;
+          padding: 12px 16px;
+          margin-bottom: 16px;
+        ">
+          <p style="margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; font-weight: 600;">What's New</p>
+          ${highlightsHTML}
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display: flex; gap: 10px;">
+          <button id="sw-later-btn" style="
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+          ">Later</button>
+          <button id="sw-update-btn" style="
+            flex: 2;
+            background: linear-gradient(135deg, #22d3ee 0%, #a855f7 50%, #ec4899 100%);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);
+          ">
+            ${autoUpdate ? `<span id="sw-countdown-text">Update Now</span> <span style="opacity: 0.8; font-weight: 500;">(<span id="sw-countdown">${AUTO_UPDATE_SECONDS}</span>s)</span>` : 'Update Now'}
+          </button>
+        </div>
+      </div>
     </div>
     <style>
       @keyframes slideUp {
-        from { transform: translateY(100%); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+      @keyframes progressShrink {
+        from { width: 100%; }
+        to { width: 0%; }
+      }
+      #sw-update-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 30px rgba(168, 85, 247, 0.5);
+      }
+      #sw-dismiss-btn:hover, #sw-later-btn:hover {
+        background: rgba(255,255,255,0.2);
       }
     </style>
   `
@@ -209,10 +326,34 @@ const showUpdateNotification = (registration: ServiceWorkerRegistration, autoUpd
 
   // Function to trigger update
   const triggerUpdate = () => {
+    // Change button to loading state
+    const btn = document.getElementById('sw-update-btn')
+    if (btn) {
+      btn.innerHTML = `
+        <span style="display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" style="animation: spin 1s linear infinite;">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"/>
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+          Updating...
+        </span>
+      `
+      btn.style.pointerEvents = 'none'
+    }
+
+    // Add spin animation
+    const style = document.createElement('style')
+    style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'
+    document.head.appendChild(style)
+
     if (registration.waiting) {
       registration.waiting.postMessage({ type: 'SKIP_WAITING' })
     }
-    notification.remove()
+
+    // Fallback: if SW doesn't respond, force reload after 2 seconds
+    setTimeout(() => {
+      window.location.reload()
+    }, 2000)
   }
 
   // Auto-update countdown
@@ -238,11 +379,18 @@ const showUpdateNotification = (registration: ServiceWorkerRegistration, autoUpd
     triggerUpdate()
   })
 
-  // Handle dismiss click - stops auto-update
-  document.getElementById('sw-dismiss-btn')?.addEventListener('click', () => {
+  // Handle dismiss/later click - stops auto-update
+  const dismissHandler = () => {
     if (countdownInterval) clearInterval(countdownInterval)
-    notification.remove()
-  })
+    notification.style.animation = 'slideDown 0.3s ease forwards'
+    const style = document.createElement('style')
+    style.textContent = '@keyframes slideDown { from { transform: translateY(0); } to { transform: translateY(100%); } }'
+    document.head.appendChild(style)
+    setTimeout(() => notification.remove(), 300)
+  }
+
+  document.getElementById('sw-dismiss-btn')?.addEventListener('click', dismissHandler)
+  document.getElementById('sw-later-btn')?.addEventListener('click', dismissHandler)
 }
 
 // Register service worker when page loads
