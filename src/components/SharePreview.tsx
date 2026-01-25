@@ -107,9 +107,30 @@ export default function SharePreview({
   }
 
   const updateItem = (index: number, updates: Partial<ParsedExpenseItem>) => {
-    setItems(prev => prev.map((item, i) =>
-      i === index ? { ...item, ...updates } : item
-    ))
+    setItems(prev => prev.map((item, i) => {
+      if (i !== index) return item
+
+      // If type is changing, also update category to a valid one for the new type
+      if (updates.type && updates.type !== item.type) {
+        const newType = updates.type
+        const validCategories = newType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+        const currentCategoryValid = validCategories.includes(item.category)
+
+        return {
+          ...item,
+          ...updates,
+          category: currentCategoryValid ? item.category : validCategories[0]
+        }
+      }
+
+      return { ...item, ...updates }
+    }))
+  }
+
+  const toggleItemType = (index: number) => {
+    const item = items[index]
+    const newType = item.type === 'income' ? 'expense' : 'income'
+    updateItem(index, { type: newType })
   }
 
   const deleteItem = (index: number) => {
@@ -402,6 +423,33 @@ export default function SharePreview({
                         <div className="flex-1 min-w-0">
                           {editingIndex === index ? (
                             <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                              {/* Type Toggle */}
+                              <div className="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-500">
+                                <button
+                                  type="button"
+                                  onClick={() => updateItem(index, { type: 'expense' })}
+                                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium transition-all ${
+                                    item.type === 'expense'
+                                      ? 'bg-red-500 text-white'
+                                      : 'bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                                  }`}
+                                >
+                                  <ArrowDownCircle size={14} />
+                                  Expense
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => updateItem(index, { type: 'income' })}
+                                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium transition-all ${
+                                    item.type === 'income'
+                                      ? 'bg-green-500 text-white'
+                                      : 'bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                                  }`}
+                                >
+                                  <ArrowUpCircle size={14} />
+                                  Income
+                                </button>
+                              </div>
                               <input
                                 type="text"
                                 value={item.description}
@@ -425,16 +473,15 @@ export default function SharePreview({
                                   onChange={(e) => updateItem(index, { category: e.target.value })}
                                   className="flex-1 px-2 py-2 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg min-w-0"
                                 >
-                                  <optgroup label="Expenses">
-                                    {EXPENSE_CATEGORIES.map(cat => (
+                                  {item.type === 'expense' ? (
+                                    EXPENSE_CATEGORIES.map(cat => (
                                       <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                  </optgroup>
-                                  <optgroup label="Income">
-                                    {INCOME_CATEGORIES.map(cat => (
+                                    ))
+                                  ) : (
+                                    INCOME_CATEGORIES.map(cat => (
                                       <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                  </optgroup>
+                                    ))
+                                  )}
                                 </select>
                               </div>
                               <div className="flex gap-2">
@@ -456,13 +503,20 @@ export default function SharePreview({
                           ) : (
                             <>
                               <div className="flex items-center gap-2 mb-0.5">
-                                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                                  item.type === 'income'
-                                    ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                                    : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                                }`}>
-                                  {item.type}
-                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleItemType(index)
+                                  }}
+                                  className={`text-xs px-1.5 py-0.5 rounded font-medium transition-all active:scale-95 ${
+                                    item.type === 'income'
+                                      ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/60'
+                                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60'
+                                  }`}
+                                  title="Tap to toggle income/expense"
+                                >
+                                  {item.type === 'income' ? '↓ income' : '↑ expense'}
+                                </button>
                                 <span className="text-xs text-gray-400">{item.date}</span>
                               </div>
                               <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">
@@ -691,6 +745,33 @@ export default function SharePreview({
                       <div className="flex-1 min-w-0">
                         {editingIndex === index ? (
                           <div className="space-y-2">
+                            {/* Type Toggle */}
+                            <div className="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-500">
+                              <button
+                                type="button"
+                                onClick={() => updateItem(index, { type: 'expense' })}
+                                className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium transition-all ${
+                                  item.type === 'expense'
+                                    ? 'bg-red-500 text-white'
+                                    : 'bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                                }`}
+                              >
+                                <ArrowDownCircle size={12} />
+                                Expense
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateItem(index, { type: 'income' })}
+                                className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium transition-all ${
+                                  item.type === 'income'
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                                }`}
+                              >
+                                <ArrowUpCircle size={12} />
+                                Income
+                              </button>
+                            </div>
                             <input
                               type="text"
                               value={item.description}
@@ -709,16 +790,15 @@ export default function SharePreview({
                                 onChange={(e) => updateItem(index, { category: e.target.value })}
                                 className="flex-1 px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded"
                               >
-                                <optgroup label="Expenses">
-                                  {EXPENSE_CATEGORIES.map(cat => (
+                                {item.type === 'expense' ? (
+                                  EXPENSE_CATEGORIES.map(cat => (
                                     <option key={cat} value={cat}>{cat}</option>
-                                  ))}
-                                </optgroup>
-                                <optgroup label="Income">
-                                  {INCOME_CATEGORIES.map(cat => (
+                                  ))
+                                ) : (
+                                  INCOME_CATEGORIES.map(cat => (
                                     <option key={cat} value={cat}>{cat}</option>
-                                  ))}
-                                </optgroup>
+                                  ))
+                                )}
                               </select>
                               <button
                                 onClick={() => setEditingIndex(null)}
@@ -731,13 +811,17 @@ export default function SharePreview({
                         ) : (
                           <>
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                item.type === 'income'
-                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                              }`}>
-                                {item.type}
-                              </span>
+                              <button
+                                onClick={() => toggleItemType(index)}
+                                className={`text-xs px-2 py-0.5 rounded-full transition-all cursor-pointer ${
+                                  item.type === 'income'
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
+                                }`}
+                                title="Click to toggle income/expense"
+                              >
+                                {item.type === 'income' ? '↓ income' : '↑ expense'}
+                              </button>
                               <span className="text-xs text-gray-500 dark:text-gray-400">{item.date}</span>
                             </div>
                             <p className="text-sm font-medium text-gray-900 dark:text-white truncate mt-1">
