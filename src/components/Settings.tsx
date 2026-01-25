@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, DollarSign, Check, Target, TrendingUp, CreditCard, Tag, Receipt, Repeat, Filter, Bell, BarChart2, FileText, Upload, Download, Sparkles, Coins, Trash2, AlertTriangle, Loader2, Cloud, CloudOff, RefreshCw, CheckCircle, Shield, HardDrive } from 'lucide-react'
+import { Settings as SettingsIcon, DollarSign, Check, Target, TrendingUp, CreditCard, Tag, Receipt, Repeat, Filter, Bell, BarChart2, FileText, Upload, Download, Sparkles, Coins, Trash2, AlertTriangle, Loader2, Cloud, CloudOff, RefreshCw, CheckCircle, Shield, HardDrive, Smartphone, ArrowDownCircle } from 'lucide-react'
 import { isBackupRecommended, getLastBackupTime } from '../lib/backupService'
 import { useCurrency, CURRENCIES } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
@@ -24,6 +24,12 @@ export default function Settings() {
   // Backup state
   const [backupNeeded, setBackupNeeded] = useState(false)
   const [lastBackup, setLastBackup] = useState<string | null>(null)
+
+  // App update state
+  const [checkingForUpdates, setCheckingForUpdates] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'available' | 'up-to-date' | 'error'>('idle')
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null)
+  const APP_VERSION = '5.4' // Should match sw.js CACHE_VERSION
 
   // Check backup status on mount
   useEffect(() => {
@@ -58,6 +64,85 @@ export default function Settings() {
       setTimeout(() => setSyncSuccess(null), 5000)
     } finally {
       setIsSyncing(false)
+    }
+  }
+
+  // Check for app updates
+  const handleCheckForUpdates = async () => {
+    setCheckingForUpdates(true)
+    setUpdateStatus('idle')
+    setUpdateMessage(null)
+
+    try {
+      if (!('serviceWorker' in navigator)) {
+        setUpdateStatus('error')
+        setUpdateMessage('Service workers not supported in this browser')
+        return
+      }
+
+      const registration = await navigator.serviceWorker.getRegistration()
+      if (!registration) {
+        setUpdateStatus('error')
+        setUpdateMessage('No service worker registered')
+        return
+      }
+
+      // Force check for updates
+      await registration.update()
+
+      // Wait a moment for the update check to complete
+      await new Promise(resolve => setTimeout(resolve, 1500))
+
+      // Check if there's a waiting worker (new version available)
+      if (registration.waiting) {
+        setUpdateStatus('available')
+        setUpdateMessage('New version available! Tap "Install Update" to update now.')
+      } else if (registration.installing) {
+        setUpdateStatus('available')
+        setUpdateMessage('Update downloading... It will be ready shortly.')
+      } else {
+        setUpdateStatus('up-to-date')
+        setUpdateMessage(`You're on the latest version (v${APP_VERSION})`)
+      }
+    } catch (error) {
+      console.error('Update check error:', error)
+      setUpdateStatus('error')
+      setUpdateMessage('Failed to check for updates. Please try again.')
+    } finally {
+      setCheckingForUpdates(false)
+    }
+  }
+
+  // Force install the update
+  const handleInstallUpdate = async () => {
+    setCheckingForUpdates(true)
+    setUpdateMessage('Installing update...')
+
+    try {
+      const registration = await navigator.serviceWorker.getRegistration()
+      if (registration?.waiting) {
+        // Tell the waiting service worker to skip waiting and activate
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+      }
+
+      // Clear all caches and reload
+      if ('caches' in window) {
+        const cacheNames = await caches.keys()
+        await Promise.all(cacheNames.map(name => caches.delete(name)))
+      }
+
+      // Set flag for post-update welcome screen
+      sessionStorage.setItem('sw_just_updated', 'true')
+
+      // Force reload with cache bypass
+      const url = new URL(window.location.href)
+      url.searchParams.set('_refresh', Date.now().toString())
+      window.location.replace(url.toString())
+    } catch (error) {
+      console.error('Install update error:', error)
+      setUpdateStatus('error')
+      setUpdateMessage('Failed to install update. Try refreshing the page.')
+      setCheckingForUpdates(false)
     }
   }
 
@@ -642,6 +727,86 @@ export default function Settings() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* App Updates Section */}
+            <div className="pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 mb-4">
+                <Smartphone className="text-purple-600 dark:text-purple-400" size={20} />
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">App Updates</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Check for and install app updates</p>
+
+              {/* Update Status Message */}
+              {updateMessage && (
+                <div className={`mb-4 p-3 rounded-xl flex items-center gap-2 ${
+                  updateStatus === 'available'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400'
+                    : updateStatus === 'up-to-date'
+                      ? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+                      : 'bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400'
+                }`}>
+                  {updateStatus === 'available' ? (
+                    <ArrowDownCircle size={18} />
+                  ) : updateStatus === 'up-to-date' ? (
+                    <CheckCircle size={18} />
+                  ) : (
+                    <AlertTriangle size={18} />
+                  )}
+                  <span className="flex-1">{updateMessage}</span>
+                </div>
+              )}
+
+              <div className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl border border-white/20 dark:border-gray-700/50">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                      <Smartphone className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-white">WealthPulse</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Current version: v{APP_VERSION}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCheckForUpdates}
+                    disabled={checkingForUpdates}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-500 hover:bg-purple-600 disabled:bg-purple-400 text-white rounded-xl font-semibold transition-colors"
+                  >
+                    {checkingForUpdates ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        Check for Updates
+                      </>
+                    )}
+                  </button>
+
+                  {updateStatus === 'available' && (
+                    <button
+                      onClick={handleInstallUpdate}
+                      disabled={checkingForUpdates}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-semibold transition-all shadow-lg"
+                    >
+                      <ArrowDownCircle className="w-4 h-4" />
+                      Install Update
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
+                  Updates include new features, bug fixes, and improvements
+                </p>
               </div>
             </div>
 
