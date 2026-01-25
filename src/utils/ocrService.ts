@@ -219,22 +219,62 @@ export async function preprocessImage(file: File): Promise<File> {
     const ctx = canvas.getContext('2d')!
 
     img.onload = () => {
-      // Scale up small images
-      const scale = Math.max(1, 1500 / Math.max(img.width, img.height))
+      // Scale up small images for better OCR (Tesseract works best with larger images)
+      const minDimension = 2000
+      const scale = Math.max(1, minDimension / Math.min(img.width, img.height))
       canvas.width = img.width * scale
       canvas.height = img.height * scale
 
-      // Draw with slight contrast enhancement
-      ctx.filter = 'contrast(1.2) brightness(1.1)'
+      // Step 1: Draw original image scaled up
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
-      canvas.toBlob((blob) => {
+      // Step 2: Convert to grayscale and enhance contrast for OCR
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const data = imageData.data
+
+      for (let i = 0; i < data.length; i += 4) {
+        // Convert to grayscale using luminosity method
+        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
+
+        // Apply contrast enhancement (1.4x) and slight brightness boost
+        let enhanced = ((gray - 128) * 1.4) + 128 + 10
+
+        // Apply adaptive thresholding for cleaner text
+        // This helps with receipts that have varying backgrounds
+        if (enhanced < 180) {
+          enhanced = Math.max(0, enhanced * 0.9) // Darken dark pixels (text)
+        } else {
+          enhanced = Math.min(255, enhanced * 1.1) // Lighten light pixels (background)
+        }
+
+        // Clamp values
+        enhanced = Math.max(0, Math.min(255, enhanced))
+
+        data[i] = enhanced     // R
+        data[i + 1] = enhanced // G
+        data[i + 2] = enhanced // B
+        // Alpha unchanged
+      }
+
+      ctx.putImageData(imageData, 0, 0)
+
+      // Step 3: Apply sharpening for crisper text edges
+      const sharpenedCanvas = document.createElement('canvas')
+      sharpenedCanvas.width = canvas.width
+      sharpenedCanvas.height = canvas.height
+      const sharpenCtx = sharpenedCanvas.getContext('2d')!
+
+      // Use CSS filter for sharpening effect
+      sharpenCtx.filter = 'contrast(1.1)'
+      sharpenCtx.drawImage(canvas, 0, 0)
+
+      sharpenedCanvas.toBlob((blob) => {
         if (blob) {
           resolve(new File([blob], file.name, { type: 'image/png' }))
         } else {
           resolve(file)
         }
-      }, 'image/png')
+      }, 'image/png', 1.0) // Maximum quality
     }
 
     img.onerror = () => resolve(file)

@@ -576,6 +576,14 @@ export default function MainApp() {
                       recurrence_end_date: ''
                     })
                   }}
+                  onIncomeAdd={async (data) => {
+                    await handleAddIncome({
+                      amount: data.amount,
+                      category: data.category,
+                      description: data.description,
+                      date: data.date
+                    })
+                  }}
                 />
               </div>
             )}

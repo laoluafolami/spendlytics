@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Camera, Image, Clipboard, Mic, MicOff, Zap, X, Check, Loader2, AlertCircle, ChevronDown, RefreshCw, Sparkles, Settings, Eye, EyeOff, Plus, Trash2, CheckSquare, Square } from 'lucide-react'
+import { Camera, Image, Clipboard, Mic, MicOff, Zap, X, Check, Loader2, AlertCircle, ChevronDown, RefreshCw, Sparkles, Settings, Eye, EyeOff, Plus, Trash2, CheckSquare, Square, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import { performOCR, preprocessImage, OCRProgress } from '../utils/ocrService'
 // Unified parser - consolidates smartParser.ts and expenseParser.ts
 import {
@@ -14,13 +14,43 @@ import {
 } from '../utils/transactionParser'
 // AI-specific functions still from geminiService
 import { extractExpenseWithGemini, extractExpenseFromTextWithGemini, extractMultipleExpensesWithGemini, getGeminiApiKey, setGeminiApiKey, clearGeminiApiKey } from '../utils/geminiService'
-import { EXPENSE_CATEGORIES } from '../types/expense'
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types/expense'
 import { useCurrency } from '../contexts/CurrencyContext'
 
 type InputMode = 'quick' | 'camera' | 'image' | 'paste' | 'voice'
+type TransactionType = 'expense' | 'income'
+
+// Custom categories storage key
+const CUSTOM_EXPENSE_CATEGORIES_KEY = 'wealthpulse_custom_expense_categories'
+const CUSTOM_INCOME_CATEGORIES_KEY = 'wealthpulse_custom_income_categories'
+
+// Helper functions for custom categories
+function getCustomCategories(type: TransactionType): string[] {
+  const key = type === 'expense' ? CUSTOM_EXPENSE_CATEGORIES_KEY : CUSTOM_INCOME_CATEGORIES_KEY
+  try {
+    const stored = localStorage.getItem(key)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+function addCustomCategory(type: TransactionType, category: string): void {
+  const key = type === 'expense' ? CUSTOM_EXPENSE_CATEGORIES_KEY : CUSTOM_INCOME_CATEGORIES_KEY
+  const existing = getCustomCategories(type)
+  if (!existing.includes(category)) {
+    localStorage.setItem(key, JSON.stringify([...existing, category]))
+  }
+}
 
 interface SmartCaptureProps {
   onExpenseAdd: (data: {
+    amount: string
+    category: string
+    description: string
+    date: string
+  }) => Promise<void>
+  onIncomeAdd?: (data: {
     amount: string
     category: string
     description: string
@@ -35,7 +65,7 @@ interface SmartCaptureProps {
   onCancel?: () => void
 }
 
-export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: SmartCaptureProps) {
+export default function SmartCapture({ onExpenseAdd, onIncomeAdd, onBatchAdd, onCancel }: SmartCaptureProps) {
   const { currency } = useCurrency()
   const [mode, setMode] = useState<InputMode>('quick')
   const [processing, setProcessing] = useState(false)
@@ -43,6 +73,15 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
   const [error, setError] = useState<string | null>(null)
   const [parsedExpense, setParsedExpense] = useState<ParsedExpense | null>(null)
   const [showReview, setShowReview] = useState(false)
+
+  // Transaction type state (expense or income)
+  const [transactionType, setTransactionType] = useState<TransactionType>('expense')
+
+  // Custom category states
+  const [customExpenseCategories, setCustomExpenseCategories] = useState<string[]>([])
+  const [customIncomeCategories, setCustomIncomeCategories] = useState<string[]>([])
+  const [showAddCategory, setShowAddCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
 
   // Multi-expense state
   const [multiResult, setMultiResult] = useState<MultiParseResult | null>(null)
@@ -81,6 +120,9 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
     if (savedKey) {
       setGeminiKey(savedKey)
     }
+    // Load custom categories
+    setCustomExpenseCategories(getCustomCategories('expense'))
+    setCustomIncomeCategories(getCustomCategories('income'))
   }, [])
 
   useEffect(() => {
@@ -469,19 +511,52 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
 
     setProcessing(true)
     try {
-      await onExpenseAdd({
-        amount,
-        category,
-        description,
-        date
-      })
+      if (transactionType === 'income' && onIncomeAdd) {
+        await onIncomeAdd({
+          amount,
+          category,
+          description,
+          date
+        })
+      } else {
+        await onExpenseAdd({
+          amount,
+          category,
+          description,
+          date
+        })
+      }
       // Reset state
       resetCapture()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add expense')
+      setError(err instanceof Error ? err.message : `Failed to add ${transactionType}`)
     } finally {
       setProcessing(false)
     }
+  }
+
+  // Handle adding a new custom category
+  const handleAddCustomCategory = () => {
+    const trimmedName = newCategoryName.trim()
+    if (!trimmedName) return
+
+    addCustomCategory(transactionType, trimmedName)
+    if (transactionType === 'expense') {
+      setCustomExpenseCategories(prev => [...prev, trimmedName])
+    } else {
+      setCustomIncomeCategories(prev => [...prev, trimmedName])
+    }
+    setCategory(trimmedName)
+    setShowAddCategory(false)
+    setNewCategoryName('')
+  }
+
+  // Get all categories for current transaction type
+  const getAllCategories = () => {
+    if (transactionType === 'expense') {
+      return [...EXPENSE_CATEGORIES, ...customExpenseCategories]
+    }
+    return [...INCOME_CATEGORIES, ...customIncomeCategories]
   }
 
   const resetCapture = () => {
@@ -500,6 +575,9 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
     setPasteInput('')
     setError(null)
     setLastImageBase64(null)
+    setShowAddCategory(false)
+    setNewCategoryName('')
+    setTransactionType('expense')
   }
 
   // Multi-expense handling functions
@@ -677,23 +755,23 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
       .reduce((sum, item) => sum + item.amount, 0)
 
     return (
-      <div className="group relative animate-fade-in">
+      <div className="group relative animate-fade-in max-h-[90vh] overflow-hidden flex flex-col">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 rounded-3xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
-        <div className="relative p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl">
+        <div className="relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl flex flex-col max-h-full">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 dark:from-purple-400 dark:via-pink-400 dark:to-orange-400 bg-clip-text text-transparent">
+              <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 dark:from-purple-400 dark:via-pink-400 dark:to-orange-400 bg-clip-text text-transparent">
                 {multiItems.length} Expenses Found
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 {multiResult?.sourceType === 'whatsapp_list' ? 'WhatsApp List' :
                  multiResult?.sourceType === 'multi_item_receipt' ? 'Receipt Items' :
                  'Multiple Items'}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            <div className="flex items-center gap-1">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                 multiResult && multiResult.confidence >= 70
                   ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                   : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
@@ -704,27 +782,27 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2 text-red-700 dark:text-red-400">
-              <AlertCircle size={18} />
-              <span>{error}</span>
-              <button onClick={() => setError(null)} className="ml-auto"><X size={16} /></button>
+            <div className="mb-3 p-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400 text-sm">
+              <AlertCircle size={16} />
+              <span className="flex-1 text-xs">{error}</span>
+              <button onClick={() => setError(null)}><X size={14} /></button>
             </div>
           )}
 
           {/* Summary */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="p-2 bg-white/50 dark:bg-gray-700/50 rounded-lg">
               <p className="text-xs text-gray-500 dark:text-gray-400">Selected</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedItems.size} of {multiItems.length}</p>
+              <p className="text-base font-bold text-gray-900 dark:text-white">{selectedItems.size} of {multiItems.length}</p>
             </div>
-            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
               <p className="text-xs text-purple-600 dark:text-purple-400">Total</p>
-              <p className="text-lg font-bold text-purple-700 dark:text-purple-300">{currency.symbol}{totalAmount.toLocaleString()}</p>
+              <p className="text-base font-bold text-purple-700 dark:text-purple-300">{currency.symbol}{totalAmount.toLocaleString()}</p>
             </div>
           </div>
 
           {/* Selection controls */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <button
               onClick={selectAllItems}
               className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50"
@@ -739,25 +817,25 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
             </button>
           </div>
 
-          {/* Items list */}
-          <div className="max-h-80 overflow-y-auto space-y-2 mb-4">
+          {/* Items list - scrollable */}
+          <div className="flex-1 overflow-y-auto space-y-2 mb-3 min-h-0 max-h-[40vh]">
             {multiItems.map((item, index) => (
               <div
                 key={index}
-                className={`p-3 rounded-xl border transition-all ${
+                className={`p-2 rounded-lg border transition-all ${
                   selectedItems.has(index)
                     ? 'bg-white/80 dark:bg-gray-700/80 border-purple-300 dark:border-purple-700'
                     : 'bg-white/40 dark:bg-gray-700/40 border-gray-200 dark:border-gray-600 opacity-60'
                 }`}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-2">
                   <button
                     onClick={() => toggleItemSelection(index)}
-                    className="mt-1 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"
+                    className="mt-0.5 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 flex-shrink-0"
                   >
                     {selectedItems.has(index)
-                      ? <CheckSquare size={20} className="text-purple-600 dark:text-purple-400" />
-                      : <Square size={20} />
+                      ? <CheckSquare size={18} className="text-purple-600 dark:text-purple-400" />
+                      : <Square size={18} />
                     }
                   </button>
 
@@ -768,29 +846,29 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
                           type="text"
                           value={item.description}
                           onChange={(e) => updateMultiItem(index, { description: e.target.value })}
-                          className="w-full px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded"
+                          className="w-full px-2 py-1.5 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg"
                           placeholder="Description"
                         />
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <input
                             type="number"
                             value={item.amount}
                             onChange={(e) => updateMultiItem(index, { amount: parseFloat(e.target.value) || 0 })}
-                            className="w-24 px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded"
+                            className="w-20 px-2 py-1.5 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg"
                             placeholder="Amount"
                           />
                           <select
                             value={item.category}
                             onChange={(e) => updateMultiItem(index, { category: e.target.value })}
-                            className="flex-1 px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded"
+                            className="flex-1 min-w-[120px] px-2 py-1.5 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg"
                           >
-                            {EXPENSE_CATEGORIES.map(cat => (
+                            {getAllCategories().map(cat => (
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
                           </select>
                           <button
                             onClick={() => setEditingIndex(null)}
-                            className="px-2 py-1 bg-purple-600 text-white rounded text-sm"
+                            className="px-2 py-1.5 bg-purple-600 text-white rounded-lg text-sm"
                           >
                             <Check size={14} />
                           </button>
@@ -806,24 +884,24 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
                     )}
                   </div>
 
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900 dark:text-white">
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-bold text-sm text-gray-900 dark:text-white">
                       {currency.symbol}{item.amount.toLocaleString()}
                     </p>
-                    <div className="flex items-center gap-1 mt-1">
+                    <div className="flex items-center gap-0.5 mt-0.5 justify-end">
                       <button
                         onClick={() => setEditingIndex(editingIndex === index ? null : index)}
                         className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                         title="Edit"
                       >
-                        <Plus size={14} className="rotate-45" />
+                        <Plus size={12} className="rotate-45" />
                       </button>
                       <button
                         onClick={() => deleteMultiItem(index)}
                         className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                         title="Delete"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
@@ -833,25 +911,26 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-3">
+          <div className="flex gap-2 flex-shrink-0">
             <button
               onClick={resetCapture}
-              className="flex-1 px-4 py-3 bg-white/50 dark:bg-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl font-semibold text-gray-700 dark:text-gray-300 transition-all flex items-center justify-center gap-2"
+              className="flex-1 px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 transition-all flex items-center justify-center gap-1.5 text-sm"
             >
-              <RefreshCw size={18} />
-              Start Over
+              <RefreshCw size={16} />
+              <span className="hidden xs:inline">Start Over</span>
+              <span className="xs:hidden">Reset</span>
             </button>
             <button
               onClick={handleConfirmMultiExpenses}
               disabled={processing || selectedItems.size === 0}
-              className="flex-1 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white py-3 px-4 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white py-2.5 px-3 rounded-lg font-medium shadow-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               {processing ? (
-                <Loader2 size={18} className="animate-spin" />
+                <Loader2 size={16} className="animate-spin" />
               ) : (
-                <Check size={18} />
+                <Check size={16} />
               )}
-              {processing ? 'Adding...' : `Add ${selectedItems.size} Expense${selectedItems.size !== 1 ? 's' : ''}`}
+              {processing ? 'Adding...' : `Add ${selectedItems.size}`}
             </button>
           </div>
         </div>
@@ -861,28 +940,40 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
 
   // Review/Edit screen
   if (showReview) {
+    const gradientColors = transactionType === 'income'
+      ? 'from-blue-500 via-cyan-500 to-teal-500'
+      : 'from-green-500 via-emerald-500 to-teal-500'
+    const titleGradient = transactionType === 'income'
+      ? 'from-blue-600 via-cyan-600 to-teal-600 dark:from-blue-400 dark:via-cyan-400 dark:to-teal-400'
+      : 'from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400'
+    const buttonGradient = transactionType === 'income'
+      ? 'from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700'
+      : 'from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
+    const focusRing = transactionType === 'income' ? 'focus:ring-blue-500' : 'focus:ring-green-500'
+
     return (
-      <div className="group relative animate-fade-in">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500 rounded-3xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
-        <div className="relative p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
-              Review Expense
+      <div className="group relative animate-fade-in max-h-[90vh] overflow-y-auto">
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradientColors} rounded-3xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity`}></div>
+        <div className="relative p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className={`text-xl sm:text-2xl font-bold bg-gradient-to-r ${titleGradient} bg-clip-text text-transparent`}>
+              Review {transactionType === 'income' ? 'Income' : 'Expense'}
             </h2>
             <div className="flex items-center gap-2">
               {parsedExpense && parsedExpense.confidence < 70 && (
                 <button
                   onClick={handleEnhanceWithAI}
                   disabled={processing}
-                  className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-full text-sm font-medium transition-all disabled:opacity-50"
+                  className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-full text-xs font-medium transition-all disabled:opacity-50"
                   title="Enhance with AI"
                 >
-                  <Sparkles size={14} />
+                  <Sparkles size={12} />
                   <span className="hidden sm:inline">Enhance</span>
                 </button>
               )}
               {parsedExpense && (
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                   parsedExpense.confidence >= 70
                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                     : parsedExpense.confidence >= 40
@@ -896,19 +987,62 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2 text-red-700 dark:text-red-400">
-              <AlertCircle size={18} />
-              <span>{error}</span>
+            <div className="mb-3 p-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400 text-sm">
+              <AlertCircle size={16} />
+              <span className="flex-1">{error}</span>
+              <button onClick={() => setError(null)}><X size={14} /></button>
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-3">
+            {/* Transaction Type Toggle */}
+            {onIncomeAdd && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Type
+                </label>
+                <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTransactionType('expense')
+                      setCategory('')
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium transition-all ${
+                      transactionType === 'expense'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-white/50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <ArrowUpCircle size={16} />
+                    Expense
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTransactionType('income')
+                      setCategory('')
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium transition-all ${
+                      transactionType === 'income'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-white/50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <ArrowDownCircle size={16} />
+                    Income
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Amount */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                 Amount *
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-3.5 text-gray-500 dark:text-gray-400 text-lg font-medium">
+                <span className="absolute left-3 top-2.5 text-gray-500 dark:text-gray-400 text-base font-medium">
                   {currency.symbol}
                 </span>
                 <input
@@ -918,85 +1052,138 @@ export default function SmartCapture({ onExpenseAdd, onBatchAdd, onCancel }: Sma
                   required
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="pl-10 w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-lg font-semibold"
+                  className={`pl-8 w-full px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg ${focusRing} focus:ring-2 focus:border-transparent transition-all text-gray-900 dark:text-white text-base font-semibold`}
                   placeholder="0.00"
                   autoFocus
                 />
               </div>
             </div>
 
+            {/* Category with Add New option */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                 Category *
               </label>
-              <div className="relative">
-                <select
-                  required
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white appearance-none"
-                >
-                  <option value="">Select category</option>
-                  {EXPENSE_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-4 top-3.5 text-gray-400 pointer-events-none" size={20} />
-              </div>
+              {showAddCategory ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Enter new category name"
+                    className={`flex-1 px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg ${focusRing} focus:ring-2 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm`}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleAddCustomCategory()
+                      } else if (e.key === 'Escape') {
+                        setShowAddCategory(false)
+                        setNewCategoryName('')
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomCategory}
+                    disabled={!newCategoryName.trim()}
+                    className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Check size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddCategory(false)
+                      setNewCategoryName('')
+                    }}
+                    className="px-3 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded-lg"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <select
+                    required
+                    value={category}
+                    onChange={(e) => {
+                      if (e.target.value === '__add_new__') {
+                        setShowAddCategory(true)
+                      } else {
+                        setCategory(e.target.value)
+                      }
+                    }}
+                    className={`w-full px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg ${focusRing} focus:ring-2 focus:border-transparent transition-all text-gray-900 dark:text-white appearance-none text-sm`}
+                  >
+                    <option value="">Select category</option>
+                    {getAllCategories().map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    <option value="__add_new__">+ Add New Category</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 text-gray-400 pointer-events-none" size={18} />
+                </div>
+              )}
             </div>
 
+            {/* Description */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                 Description
               </label>
               <input
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
-                placeholder="What was this expense for?"
+                className={`w-full px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg ${focusRing} focus:ring-2 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm`}
+                placeholder={`What was this ${transactionType} for?`}
               />
             </div>
 
+            {/* Date */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                 Date
               </label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                className={`w-full px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg ${focusRing} focus:ring-2 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm`}
               />
             </div>
 
+            {/* Original text preview */}
             {parsedExpense?.rawText && (
-              <div className="p-3 bg-gray-100 dark:bg-gray-700/50 rounded-xl">
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Original text:</p>
-                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{parsedExpense.rawText}</p>
+              <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Original text:</p>
+                <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">{parsedExpense.rawText}</p>
               </div>
             )}
           </div>
 
-          <div className="flex gap-3 mt-6">
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-4">
             <button
               onClick={resetCapture}
-              className="flex-1 px-4 py-3 bg-white/50 dark:bg-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-xl font-semibold text-gray-700 dark:text-gray-300 transition-all flex items-center justify-center gap-2"
+              className="flex-1 px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 transition-all flex items-center justify-center gap-1.5 text-sm"
             >
-              <RefreshCw size={18} />
-              Try Again
+              <RefreshCw size={16} />
+              <span className="hidden xs:inline">Try Again</span>
+              <span className="xs:hidden">Reset</span>
             </button>
             <button
               onClick={handleConfirmExpense}
               disabled={processing || !amount || !category}
-              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 px-4 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`flex-1 bg-gradient-to-r ${buttonGradient} text-white py-2.5 px-3 rounded-lg font-medium shadow-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-sm`}
             >
               {processing ? (
-                <Loader2 size={18} className="animate-spin" />
+                <Loader2 size={16} className="animate-spin" />
               ) : (
-                <Check size={18} />
+                <Check size={16} />
               )}
-              {processing ? 'Saving...' : 'Add Expense'}
+              {processing ? 'Saving...' : `Add ${transactionType === 'income' ? 'Income' : 'Expense'}`}
             </button>
           </div>
         </div>

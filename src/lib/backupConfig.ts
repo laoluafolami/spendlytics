@@ -163,6 +163,15 @@ export const LOCALSTORAGE_KEYS = {
     description: 'Investment tracking preferences'
   },
 
+  // Custom Categories
+  customCategories: {
+    keys: [
+      'wealthpulse_custom_expense_categories',
+      'wealthpulse_custom_income_categories'
+    ],
+    description: 'User-defined custom categories for expenses and income'
+  },
+
   // Local Data Cache (for offline support)
   localCache: {
     keys: [
