@@ -32,6 +32,18 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
   const { formatAmount } = useCurrency()
   const { settings } = useSettings()
   const { user } = useAuth()
+
+  // Guard against null settings during initial load
+  const safeSettings = settings || {
+    feature_advanced_filters: false,
+    feature_saved_filters: false,
+    feature_payment_methods: false,
+    feature_recurring: false,
+    feature_tags: false,
+    feature_receipts: false,
+    feature_date_range_filter: false,
+    feature_amount_range_filter: false,
+  }
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('')
@@ -46,10 +58,10 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
   const [presetName, setPresetName] = useState('')
 
   useEffect(() => {
-    if (settings.feature_saved_filters) {
+    if (safeSettings.feature_saved_filters) {
       loadFilterPresets()
     }
-  }, [settings.feature_saved_filters])
+  }, [safeSettings.feature_saved_filters])
 
   const loadFilterPresets = async () => {
     if (!user) return
@@ -185,7 +197,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {settings.feature_advanced_filters && (
+      {safeSettings.feature_advanced_filters && (
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl blur-xl opacity-10"></div>
           <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50">
@@ -220,7 +232,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                     <X size={18} />
                     Clear
                   </button>
-                  {settings.feature_saved_filters && (
+                  {safeSettings.feature_saved_filters && (
                     <button
                       onClick={() => setShowSavePreset(!showSavePreset)}
                       className="px-4 py-2.5 bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 rounded-xl font-medium flex items-center gap-2 transition-all"
@@ -259,7 +271,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
               </div>
             )}
 
-            {settings.feature_saved_filters && filterPresets.length > 0 && (
+            {safeSettings.feature_saved_filters && filterPresets.length > 0 && (
               <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
                 <div className="flex items-center gap-2 mb-3">
                   <Bookmark size={16} className="text-blue-600 dark:text-blue-400" />
@@ -299,7 +311,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                   ))}
                 </select>
 
-                {settings.feature_payment_methods && (
+                {safeSettings.feature_payment_methods && (
                   <select
                     value={selectedPaymentMethod}
                     onChange={(e) => setSelectedPaymentMethod(e.target.value)}
@@ -314,7 +326,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                   </select>
                 )}
 
-                {settings.feature_recurring && (
+                {safeSettings.feature_recurring && (
                   <label className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer">
                     <input
                       type="checkbox"
@@ -326,7 +338,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                   </label>
                 )}
 
-                {settings.feature_date_range_filter && (
+                {safeSettings.feature_date_range_filter && (
                   <>
                     <input
                       type="date"
@@ -345,7 +357,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                   </>
                 )}
 
-                {settings.feature_amount_range_filter && (
+                {safeSettings.feature_amount_range_filter && (
                   <>
                     <input
                       type="number"
@@ -398,17 +410,17 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                             <Calendar size={12} />
                             {format(new Date(expense.date), 'MMM dd, yyyy')}
                           </span>
-                          {settings.feature_recurring && expense.is_recurring && (
+                          {safeSettings.feature_recurring && expense.is_recurring && (
                             <Repeat size={12} className="text-blue-500" />
                           )}
                         </div>
-                        {settings.feature_payment_methods && expense.payment_method && (
+                        {safeSettings.feature_payment_methods && expense.payment_method && (
                           <div className="flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
                             <CreditCard size={12} />
                             {expense.payment_method}
                           </div>
                         )}
-                        {settings.feature_tags && expense.tags && expense.tags.length > 0 && (
+                        {safeSettings.feature_tags && expense.tags && expense.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {expense.tags.map((tag, index) => (
                               <span
@@ -428,7 +440,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-200/30 dark:border-gray-700/30">
-                      {settings.feature_receipts && expense.receipt_url && (
+                      {safeSettings.feature_receipts && expense.receipt_url && (
                         <a
                           href={expense.receipt_url}
                           target="_blank"
@@ -478,7 +490,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Category
                       </th>
-                      {settings.feature_payment_methods && (
+                      {safeSettings.feature_payment_methods && (
                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                           Payment
                         </th>
@@ -498,7 +510,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                           <div className="flex items-center gap-2">
                             <Calendar size={14} className="text-gray-400" />
                             {format(new Date(expense.date), 'MMM dd, yyyy')}
-                            {settings.feature_recurring && expense.is_recurring && (
+                            {safeSettings.feature_recurring && expense.is_recurring && (
                               <span title="Recurring expense">
                                 <Repeat size={14} className="text-blue-500" />
                               </span>
@@ -508,7 +520,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                         <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                           <div className="space-y-1">
                             <div>{expense.description || '-'}</div>
-                            {settings.feature_tags && expense.tags && expense.tags.length > 0 && (
+                            {safeSettings.feature_tags && expense.tags && expense.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {expense.tags.map((tag, index) => (
                                   <span
@@ -520,7 +532,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                                 ))}
                               </div>
                             )}
-                            {settings.feature_receipts && expense.receipt_url && (
+                            {safeSettings.feature_receipts && expense.receipt_url && (
                               <a
                                 href={expense.receipt_url}
                                 target="_blank"
@@ -538,7 +550,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                             {expense.category}
                           </span>
                         </td>
-                        {settings.feature_payment_methods && (
+                        {safeSettings.feature_payment_methods && (
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
                               <CreditCard size={12} />
