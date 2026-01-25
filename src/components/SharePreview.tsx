@@ -232,7 +232,7 @@ export default function SharePreview({
         <div className="flex-1 min-h-[10vh]" onClick={handleClose} />
 
         {/* Bottom sheet container */}
-        <div className="relative bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl animate-slide-up overflow-hidden max-h-[90vh] flex flex-col safe-bottom">
+        <div className="relative bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl animate-slide-up overflow-hidden flex flex-col" style={{ maxHeight: 'calc(90vh - env(safe-area-inset-bottom, 0px))' }}>
           {/* Pull indicator */}
           <div className="flex justify-center pt-3 pb-2">
             <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
@@ -262,8 +262,8 @@ export default function SharePreview({
             </div>
           </div>
 
-          {/* Content */}
-          <div ref={contentRef} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+          {/* Content - scrollable area */}
+          <div ref={contentRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4">
             {/* Processing state */}
             {processing && (
               <div className="flex flex-col items-center justify-center py-12">
@@ -561,9 +561,9 @@ export default function SharePreview({
             )}
           </div>
 
-          {/* Footer Actions */}
+          {/* Footer Actions - Always visible at bottom */}
           {!processing && items.length > 0 && (
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
               <button
                 onClick={handleConfirm}
                 disabled={importing || selectedItems.size === 0}
