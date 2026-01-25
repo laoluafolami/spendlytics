@@ -102,64 +102,245 @@ const registerServiceWorker = async () => {
 
 // Update changelog - edit this when releasing new versions
 const UPDATE_CHANGELOG = {
-  version: '5.2',
+  version: '5.3',
   title: 'Smart Capture Upgrade',
+  // Short highlights for update notification
   highlights: [
     { icon: '📷', text: 'Better receipt scanning accuracy' },
     { icon: '💰', text: 'Add income directly from captures' },
     { icon: '🏷️', text: 'Create custom categories on-the-fly' },
     { icon: '📱', text: 'Improved mobile experience' },
+  ],
+  // Detailed tips for post-update welcome screen
+  tips: [
+    {
+      icon: '📸',
+      title: 'Snap Any Receipt',
+      description: 'Take a photo or upload an image — our enhanced OCR instantly extracts amounts, dates, and merchant info.',
+      color: '#22d3ee',
+      colorEnd: '#3b82f6'
+    },
+    {
+      icon: '🔄',
+      title: 'Income or Expense? You Choose',
+      description: 'Toggle between income and expense right in the capture screen. Perfect for tracking refunds or payments received.',
+      color: '#10b981',
+      colorEnd: '#22d3ee'
+    },
+    {
+      icon: '✨',
+      title: 'Create Categories Instantly',
+      description: 'Don\'t see the right category? Tap "+ Add New" and create your own — it\'s saved for future use.',
+      color: '#a855f7',
+      colorEnd: '#ec4899'
+    },
+    {
+      icon: '⚡',
+      title: 'Lightning-Fast Updates',
+      description: 'The app now updates automatically in the background. You\'ll always have the latest features!',
+      color: '#f59e0b',
+      colorEnd: '#ef4444'
+    }
   ]
 }
 
-// Show success toast after update
-const showUpdateSuccessToast = () => {
-  const toast = document.createElement('div')
-  toast.innerHTML = `
+// Show post-update welcome experience
+const showUpdateWelcome = () => {
+  const overlay = document.createElement('div')
+  overlay.id = 'update-welcome-overlay'
+
+  const tipsHTML = UPDATE_CHANGELOG.tips?.map((tip, i) => `
     <div style="
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-      color: white;
-      padding: 14px 24px;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(30, 27, 75, 0.5);
-      z-index: 10000;
       display: flex;
-      align-items: center;
-      gap: 12px;
-      animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1), toastOut 0.3s ease 3.7s forwards;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      animation: tipFadeIn 0.5s ease ${0.3 + i * 0.1}s both;
     ">
       <div style="
-        width: 28px;
-        height: 28px;
-        background: linear-gradient(135deg, #22d3ee 0%, #10b981 100%);
-        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        background: linear-gradient(135deg, ${tip.color || '#22d3ee'} 0%, ${tip.colorEnd || '#a855f7'} 100%);
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 14px;
-      ">✓</div>
-      <div>
-        <p style="margin: 0; font-weight: 600; font-size: 14px;">Updated to v${UPDATE_CHANGELOG.version}!</p>
-        <p style="margin: 2px 0 0; font-size: 12px; opacity: 0.7;">${UPDATE_CHANGELOG.title}</p>
+        font-size: 22px;
+        flex-shrink: 0;
+      ">${tip.icon}</div>
+      <div style="flex: 1; min-width: 0;">
+        <p style="margin: 0; font-weight: 600; font-size: 14px; color: white;">${tip.title}</p>
+        <p style="margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.4;">${tip.description}</p>
       </div>
     </div>
+  `).join('') || ''
+
+  overlay.innerHTML = `
+    <div style="
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: overlayFadeIn 0.3s ease;
+    ">
+      <div style="
+        width: 100%;
+        max-width: 420px;
+        max-height: 90vh;
+        overflow-y: auto;
+        background: linear-gradient(165deg, #1e1b4b 0%, #312e81 40%, #4c1d95 100%);
+        border-radius: 28px;
+        box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+        animation: modalSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      ">
+        <!-- Celebration header -->
+        <div style="
+          padding: 32px 24px 24px;
+          text-align: center;
+          position: relative;
+          overflow: hidden;
+        ">
+          <!-- Confetti/sparkles background -->
+          <div style="
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 30%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 80%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+          "></div>
+
+          <!-- Animated icon -->
+          <div style="
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #22d3ee 0%, #a855f7 50%, #ec4899 100%);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            animation: iconPop 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+            box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4);
+          ">🎉</div>
+
+          <h1 style="
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            animation: textFadeIn 0.5s ease 0.3s both;
+          ">You're All Set!</h1>
+
+          <p style="
+            margin: 8px 0 0;
+            font-size: 15px;
+            color: rgba(255,255,255,0.7);
+            animation: textFadeIn 0.5s ease 0.4s both;
+          ">v${UPDATE_CHANGELOG.version} · ${UPDATE_CHANGELOG.title}</p>
+        </div>
+
+        <!-- Tips section -->
+        <div style="padding: 0 20px 24px;">
+          <p style="
+            margin: 0 0 14px 4px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.5);
+            font-weight: 600;
+          ">Quick Tips</p>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${tipsHTML}
+          </div>
+        </div>
+
+        <!-- CTA button -->
+        <div style="padding: 0 20px 28px;">
+          <button id="welcome-cta-btn" style="
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #22d3ee 0%, #a855f7 50%, #ec4899 100%);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(168, 85, 247, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            animation: btnFadeIn 0.5s ease 0.6s both;
+          ">Let's Go! ✨</button>
+        </div>
+      </div>
+    </div>
+
     <style>
-      @keyframes toastIn {
-        from { transform: translateX(-50%) translateY(-100%) scale(0.9); opacity: 0; }
-        to { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+      @keyframes overlayFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
       }
-      @keyframes toastOut {
-        from { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
-        to { transform: translateX(-50%) translateY(-20px) scale(0.95); opacity: 0; }
+      @keyframes modalSlideUp {
+        from { opacity: 0; transform: translateY(40px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes iconPop {
+        from { opacity: 0; transform: scale(0.5) rotate(-10deg); }
+        to { opacity: 1; transform: scale(1) rotate(0deg); }
+      }
+      @keyframes textFadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes tipFadeIn {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes btnFadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      #welcome-cta-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px rgba(168, 85, 247, 0.5);
+      }
+      #welcome-cta-btn:active {
+        transform: translateY(0);
       }
     </style>
   `
-  document.body.appendChild(toast)
-  setTimeout(() => toast.remove(), 4000)
+
+  document.body.appendChild(overlay)
+
+  // Handle CTA click
+  document.getElementById('welcome-cta-btn')?.addEventListener('click', () => {
+    overlay.style.animation = 'overlayFadeOut 0.3s ease forwards'
+    const style = document.createElement('style')
+    style.textContent = '@keyframes overlayFadeOut { from { opacity: 1; } to { opacity: 0; } }'
+    document.head.appendChild(style)
+    setTimeout(() => overlay.remove(), 300)
+  })
+
+  // Also close on overlay click (outside modal)
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay.firstElementChild) {
+      document.getElementById('welcome-cta-btn')?.click()
+    }
+  })
+}
+
+// Show success toast after update (quick toast, then welcome screen)
+const showUpdateSuccessToast = () => {
+  // Show welcome experience after a brief moment
+  setTimeout(() => showUpdateWelcome(), 500)
 }
 
 // Show world-class update notification with changelog
