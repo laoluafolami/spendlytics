@@ -502,21 +502,27 @@ export default function SharePreview({
                             </div>
                           ) : (
                             <>
+                              {/* Prominent Type Toggle */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleItemType(index)
+                                }}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm transition-all active:scale-95 mb-2 ${
+                                  item.type === 'income'
+                                    ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700'
+                                    : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
+                                }`}
+                              >
+                                {item.type === 'income' ? (
+                                  <ArrowUpCircle size={16} />
+                                ) : (
+                                  <ArrowDownCircle size={16} />
+                                )}
+                                <span>{item.type === 'income' ? 'Income' : 'Expense'}</span>
+                                <span className="text-xs opacity-60 ml-1">(tap to change)</span>
+                              </button>
                               <div className="flex items-center gap-2 mb-0.5">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    toggleItemType(index)
-                                  }}
-                                  className={`text-xs px-1.5 py-0.5 rounded font-medium transition-all active:scale-95 ${
-                                    item.type === 'income'
-                                      ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/60'
-                                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60'
-                                  }`}
-                                  title="Tap to toggle income/expense"
-                                >
-                                  {item.type === 'income' ? '↓ income' : '↑ expense'}
-                                </button>
                                 <span className="text-xs text-gray-400">{item.date}</span>
                               </div>
                               <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">
@@ -810,18 +816,25 @@ export default function SharePreview({
                           </div>
                         ) : (
                           <>
+                            {/* Prominent Type Toggle */}
+                            <button
+                              onClick={() => toggleItemType(index)}
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm transition-all mb-2 ${
+                                item.type === 'income'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50'
+                              }`}
+                              title="Click to toggle income/expense"
+                            >
+                              {item.type === 'income' ? (
+                                <ArrowUpCircle size={16} />
+                              ) : (
+                                <ArrowDownCircle size={16} />
+                              )}
+                              <span>{item.type === 'income' ? 'Income' : 'Expense'}</span>
+                              <span className="text-xs opacity-60">(click to change)</span>
+                            </button>
                             <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => toggleItemType(index)}
-                                className={`text-xs px-2 py-0.5 rounded-full transition-all cursor-pointer ${
-                                  item.type === 'income'
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
-                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
-                                }`}
-                                title="Click to toggle income/expense"
-                              >
-                                {item.type === 'income' ? '↓ income' : '↑ expense'}
-                              </button>
                               <span className="text-xs text-gray-500 dark:text-gray-400">{item.date}</span>
                             </div>
                             <p className="text-sm font-medium text-gray-900 dark:text-white truncate mt-1">
