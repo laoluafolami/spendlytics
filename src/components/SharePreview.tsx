@@ -114,7 +114,7 @@ export default function SharePreview({
       if (updates.type && updates.type !== item.type) {
         const newType = updates.type
         const validCategories = newType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
-        const currentCategoryValid = validCategories.includes(item.category)
+        const currentCategoryValid = (validCategories as readonly string[]).includes(item.category)
 
         return {
           ...item,
