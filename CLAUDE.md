@@ -12,6 +12,19 @@ This is **WealthPulse**, a finance tracker using:
 
 ---
 
+## CRITICAL: Pre-Commit Build Check
+
+**BEFORE EVERY COMMIT, Claude MUST run:**
+```bash
+npm run typecheck
+```
+
+If this fails, **DO NOT COMMIT**. Fix the errors first.
+
+This is automated via a git pre-commit hook, but Claude must also verify manually. Breaking builds destroys user trust and wastes time.
+
+---
+
 ## MANDATORY RULES - Must Be Followed Before Writing Any Code
 
 These rules are **non-negotiable**. Claude must explicitly check compliance before writing or modifying any code.
