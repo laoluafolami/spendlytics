@@ -468,76 +468,149 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
               <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Try adjusting your filters</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
-              {filteredTransactions.map((transaction) => (
-                <div
-                  key={`${transaction.source_table}-${transaction.id}`}
-                  className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all p-4"
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Type Indicator */}
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      transaction.type === 'income'
-                        ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20'
-                        : 'bg-gradient-to-br from-red-500/20 to-rose-500/20'
-                    }`}>
-                      {transaction.type === 'income' ? (
-                        <ArrowUpCircle size={20} className="text-green-600 dark:text-green-400" />
-                      ) : (
-                        <ArrowDownCircle size={20} className="text-red-600 dark:text-red-400" />
-                      )}
-                    </div>
+            <>
+              {/* Mobile Card Layout */}
+              <div className="block md:hidden divide-y divide-gray-200/30 dark:divide-gray-700/30">
+                {filteredTransactions.map((transaction) => (
+                  <div
+                    key={`mobile-${transaction.source_table}-${transaction.id}`}
+                    className="p-4 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all"
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Type Indicator */}
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        transaction.type === 'income'
+                          ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20'
+                          : 'bg-gradient-to-br from-red-500/20 to-rose-500/20'
+                      }`}>
+                        {transaction.type === 'income' ? (
+                          <ArrowUpCircle size={20} className="text-green-600 dark:text-green-400" />
+                        ) : (
+                          <ArrowDownCircle size={20} className="text-red-600 dark:text-red-400" />
+                        )}
+                      </div>
 
-                    {/* Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      {/* Details */}
+                      <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 dark:text-white truncate">
                           {transaction.description}
                         </p>
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                          transaction.type === 'income'
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                        }`}>
-                          {transaction.type === 'income' ? 'Income' : 'Expense'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                          {transaction.category}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                            transaction.type === 'income'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                          }`}>
+                            {transaction.type === 'income' ? 'Income' : 'Expense'}
+                          </span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                            {transaction.category}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
                           <Calendar size={12} />
                           {format(new Date(transaction.date), 'MMM dd, yyyy')}
                         </span>
                       </div>
+
+                      {/* Amount */}
+                      <div className="text-right flex-shrink-0">
+                        <p className={`font-bold text-lg ${
+                          transaction.type === 'income'
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Amount */}
-                    <div className="text-right">
-                      <p className={`font-bold ${
-                        transaction.type === 'income'
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-red-600 dark:text-red-400'
-                      }`}>
-                        {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)}
-                      </p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                    {/* Mobile Actions */}
+                    <div className="flex justify-end mt-3 pt-3 border-t border-gray-200/30 dark:border-gray-700/30">
                       <button
                         onClick={() => handleDelete(transaction)}
-                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all"
-                        title="Delete"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium transition-all"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
+                        Delete
                       </button>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              {/* Desktop Layout */}
+              <div className="hidden md:block divide-y divide-gray-200/30 dark:divide-gray-700/30">
+                {filteredTransactions.map((transaction) => (
+                  <div
+                    key={`desktop-${transaction.source_table}-${transaction.id}`}
+                    className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all p-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      {/* Type Indicator */}
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        transaction.type === 'income'
+                          ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20'
+                          : 'bg-gradient-to-br from-red-500/20 to-rose-500/20'
+                      }`}>
+                        {transaction.type === 'income' ? (
+                          <ArrowUpCircle size={20} className="text-green-600 dark:text-green-400" />
+                        ) : (
+                          <ArrowDownCircle size={20} className="text-red-600 dark:text-red-400" />
+                        )}
+                      </div>
+
+                      {/* Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">
+                            {transaction.description}
+                          </p>
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                            transaction.type === 'income'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                          }`}>
+                            {transaction.type === 'income' ? 'Income' : 'Expense'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                            {transaction.category}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <Calendar size={12} />
+                            {format(new Date(transaction.date), 'MMM dd, yyyy')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="text-right">
+                        <p className={`font-bold ${
+                          transaction.type === 'income'
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)}
+                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleDelete(transaction)}
+                          className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

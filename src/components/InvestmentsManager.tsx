@@ -676,100 +676,172 @@ const InvestmentsManager: React.FC = () => {
         </select>
       </div>
 
-      {/* Holdings Table */}
-      <div className="bg-white/60 dark:bg-white/50 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-200 dark:border-gray-700/50 shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100 dark:bg-gray-200 dark:bg-gray-700/50">
-              <tr>
-                <th className="text-left text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Symbol</th>
-                <th className="text-left text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Shares</th>
-                <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Avg Cost</th>
-                <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Current Price</th>
-                <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Market Value</th>
-                <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Gain/Loss</th>
-                <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Yield</th>
-                <th className="text-center text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+      {/* Holdings */}
+      <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/50 shadow-lg overflow-hidden">
+        {filteredInvestments.length === 0 ? (
+          <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+            {investments.length === 0 ? (
+              <div>
+                <Briefcase className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No investments yet</p>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="text-blue-400 hover:text-blue-300 mt-2"
+                >
+                  Add your first investment
+                </button>
+              </div>
+            ) : (
+              <p>No investments match your search</p>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card Layout */}
+            <div className="block lg:hidden divide-y divide-gray-200/30 dark:divide-gray-700/30">
               {filteredInvestments.map((investment) => (
-                <tr key={investment.id} className="border-t border-gray-800 hover:bg-white/50 dark:bg-gray-800/30">
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="text-gray-800 dark:text-white font-medium">{investment.symbol}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm truncate max-w-[150px]">{investment.name}</p>
+                <div key={`mobile-${investment.id}`} className="p-4 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-gray-900 dark:text-white font-bold text-lg">{investment.symbol}</p>
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                          {investment.type.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm truncate">{investment.name}</p>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 dark:text-white">{investment.shares.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
-                    {formatAmount(investment.average_cost)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <input
-                      type="number"
-                      value={investment.current_price}
-                      onChange={(e) => updatePrice(investment.id, parseFloat(e.target.value) || 0)}
-                      className="w-24 px-2 py-1 bg-gray-200 dark:bg-gray-700 border border-gray-600 rounded text-gray-800 dark:text-white text-right focus:outline-none focus:border-blue-500"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-800 dark:text-white font-medium">
-                    {formatAmount(investment.market_value)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div>
-                      <p className={investment.gain_loss >= 0 ? 'text-green-400' : 'text-red-400'}>
-                        {formatAmount(investment.gain_loss)}
-                      </p>
-                      <p className={`text-sm ${investment.gain_loss >= 0 ? 'text-green-400/70' : 'text-red-400/70'}`}>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-gray-900 dark:text-white font-bold">{formatAmount(investment.market_value)}</p>
+                      <p className={`text-sm font-medium ${investment.gain_loss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                         {formatPercent(investment.gain_loss_percent)}
                       </p>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-right text-purple-400">
-                    {investment.dividend_yield ? `${investment.dividend_yield}%` : '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                    <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-2">
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">Shares</p>
+                      <p className="text-gray-900 dark:text-white font-medium">{investment.shares.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-2">
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">Avg Cost</p>
+                      <p className="text-gray-900 dark:text-white font-medium">{formatAmount(investment.average_cost)}</p>
+                    </div>
+                    <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-2">
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">Current Price</p>
+                      <p className="text-gray-900 dark:text-white font-medium">{formatAmount(investment.current_price)}</p>
+                    </div>
+                    <div className={`rounded-lg p-2 ${investment.gain_loss >= 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">Gain/Loss</p>
+                      <p className={`font-medium ${investment.gain_loss >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {formatAmount(investment.gain_loss)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200/30 dark:border-gray-700/30">
+                    {investment.dividend_yield ? (
+                      <span className="text-sm text-purple-600 dark:text-purple-400">Yield: {investment.dividend_yield}%</span>
+                    ) : (
+                      <span className="text-sm text-gray-400">No dividend</span>
+                    )}
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEdit(investment)}
-                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 rounded transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-all"
                       >
                         <Edit2 className="w-4 h-4" />
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDelete(investment.id)}
-                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium transition-all"
                       >
                         <Trash2 className="w-4 h-4" />
+                        Delete
                       </button>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-              {filteredInvestments.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                    {investments.length === 0 ? (
-                      <div>
-                        <Briefcase className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>No investments yet</p>
-                        <button
-                          onClick={() => setShowModal(true)}
-                          className="text-blue-400 hover:text-blue-300 mt-2"
-                        >
-                          Add your first investment
-                        </button>
-                      </div>
-                    ) : (
-                      <p>No investments match your search</p>
-                    )}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            {/* Desktop Table Layout */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100 dark:bg-gray-700/50">
+                  <tr>
+                    <th className="text-left text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Symbol</th>
+                    <th className="text-left text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Shares</th>
+                    <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Avg Cost</th>
+                    <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Current Price</th>
+                    <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Market Value</th>
+                    <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Gain/Loss</th>
+                    <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Yield</th>
+                    <th className="text-center text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredInvestments.map((investment) => (
+                    <tr key={`desktop-${investment.id}`} className="border-t border-gray-200 dark:border-gray-700 hover:bg-white/50 dark:hover:bg-gray-700/30">
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="text-gray-800 dark:text-white font-medium">{investment.symbol}</p>
+                          <p className="text-gray-500 dark:text-gray-400 text-sm truncate max-w-[150px]">{investment.name}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-800 dark:text-white">{investment.shares.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
+                        {formatAmount(investment.average_cost)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <input
+                          type="number"
+                          value={investment.current_price}
+                          onChange={(e) => updatePrice(investment.id, parseFloat(e.target.value) || 0)}
+                          className="w-24 px-2 py-1 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white text-right focus:outline-none focus:border-blue-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-800 dark:text-white font-medium">
+                        {formatAmount(investment.market_value)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div>
+                          <p className={investment.gain_loss >= 0 ? 'text-green-500' : 'text-red-500'}>
+                            {formatAmount(investment.gain_loss)}
+                          </p>
+                          <p className={`text-sm ${investment.gain_loss >= 0 ? 'text-green-500/70' : 'text-red-500/70'}`}>
+                            {formatPercent(investment.gain_loss_percent)}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right text-purple-500">
+                        {investment.dividend_yield ? `${investment.dividend_yield}%` : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleEdit(investment)}
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(investment.id)}
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Top Performers */}
