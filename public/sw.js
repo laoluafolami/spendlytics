@@ -4,7 +4,7 @@
  * v5: Aggressive cache clearing and instant updates
  */
 
-const CACHE_VERSION = 'v5.3';
+const CACHE_VERSION = 'v5.4';
 const STATIC_CACHE = `wealthpulse-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `wealthpulse-dynamic-${CACHE_VERSION}`;
 const SHARE_CACHE = `wealthpulse-share-${CACHE_VERSION}`;
@@ -89,11 +89,19 @@ self.addEventListener('activate', (event) => {
       .then((clients) => {
         console.log('[SW] Notifying', clients.length, 'clients of update');
         clients.forEach((client) => {
+          // Send update message with force refresh flag
           client.postMessage({
             type: 'SW_UPDATED',
-            version: CACHE_VERSION
+            version: CACHE_VERSION,
+            forceRefresh: true
           });
         });
+
+        // If no clients, the caches are cleared anyway
+        // When user opens app, they'll get fresh content
+        if (clients.length === 0) {
+          console.log('[SW] No active clients - caches cleared for next visit');
+        }
       })
   );
 });

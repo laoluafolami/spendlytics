@@ -9,6 +9,72 @@ import { AuthProvider } from './contexts/AuthContext'
 import { initSyncService, performFullSync } from './lib/syncService'
 import './index.css'
 
+// Clean up refresh parameter from URL if present (from force refresh)
+const cleanRefreshParam = () => {
+  const url = new URL(window.location.href)
+  if (url.searchParams.has('_refresh')) {
+    url.searchParams.delete('_refresh')
+    window.history.replaceState({}, '', url.toString())
+  }
+}
+cleanRefreshParam()
+
+// Nuclear cache clearing - ensures user sees the latest version
+const forceHardRefresh = async () => {
+  console.log('[Update] Starting nuclear cache clear...')
+
+  try {
+    // 1. Clear all Cache Storage caches
+    if ('caches' in window) {
+      const cacheNames = await caches.keys()
+      console.log('[Update] Clearing', cacheNames.length, 'caches')
+      await Promise.all(cacheNames.map(name => caches.delete(name)))
+    }
+
+    // 2. Clear localStorage items that might cache old data (except user data)
+    const keysToKeep = [
+      'expense_tracker_session_id',
+      'expense-tracker-theme',
+      'expense-tracker-currency',
+      'gemini_api_key',
+      'sw_just_updated'
+    ]
+    const allKeys = Object.keys(localStorage)
+    allKeys.forEach(key => {
+      if (!keysToKeep.some(k => key.includes(k))) {
+        // Only remove cache-related keys, not user data
+        if (key.includes('cache') || key.includes('version') || key.includes('sw_')) {
+          localStorage.removeItem(key)
+        }
+      }
+    })
+
+    // 3. Clear sessionStorage (except our update flag)
+    const updateFlag = sessionStorage.getItem('sw_just_updated')
+    sessionStorage.clear()
+    if (updateFlag) sessionStorage.setItem('sw_just_updated', updateFlag)
+
+    // 4. Unregister all service workers and re-register
+    const registrations = await navigator.serviceWorker.getRegistrations()
+    for (const registration of registrations) {
+      await registration.unregister()
+    }
+
+    console.log('[Update] All caches cleared, reloading with cache bypass...')
+
+    // 5. Force reload with cache bypass
+    // Adding timestamp to URL forces browser to fetch fresh
+    const url = new URL(window.location.href)
+    url.searchParams.set('_refresh', Date.now().toString())
+    window.location.replace(url.toString())
+
+  } catch (error) {
+    console.error('[Update] Cache clear failed:', error)
+    // Fallback: simple reload
+    window.location.reload()
+  }
+}
+
 // Enhanced Service Worker Registration with aggressive updates
 const registerServiceWorker = async () => {
   if (!('serviceWorker' in navigator)) {
@@ -54,10 +120,11 @@ const registerServiceWorker = async () => {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!refreshing) {
         refreshing = true
-        console.log('[SW] Controller changed, reloading...')
+        console.log('[SW] Controller changed, forcing hard refresh...')
         // Clear any stale data before reload
         sessionStorage.setItem('sw_just_updated', 'true')
-        window.location.reload()
+        // Force hard refresh - bypass all caches
+        forceHardRefresh()
       }
     })
 
@@ -78,13 +145,14 @@ const registerServiceWorker = async () => {
         performFullSync().catch(console.error)
       }
 
-      // Handle SW_UPDATED message - force reload
+      // Handle SW_UPDATED message - force nuclear refresh
       if (event.data && event.data.type === 'SW_UPDATED') {
-        console.log('[SW] Service worker updated to', event.data.version)
+        console.log('[SW] Service worker updated to', event.data.version, '- forcing refresh')
         if (!refreshing) {
           refreshing = true
           sessionStorage.setItem('sw_just_updated', 'true')
-          window.location.reload()
+          // Use nuclear refresh to ensure all caches are cleared
+          forceHardRefresh()
         }
       }
     })
@@ -102,7 +170,7 @@ const registerServiceWorker = async () => {
 
 // Update changelog - edit this when releasing new versions
 const UPDATE_CHANGELOG = {
-  version: '5.3',
+  version: '5.4',
   title: 'Smart Capture Upgrade',
   // Short highlights for update notification
   highlights: [
@@ -531,9 +599,9 @@ const showUpdateNotification = (registration: ServiceWorkerRegistration, autoUpd
       registration.waiting.postMessage({ type: 'SKIP_WAITING' })
     }
 
-    // Fallback: if SW doesn't respond, force reload after 2 seconds
+    // Fallback: if SW doesn't respond, force nuclear refresh after 2 seconds
     setTimeout(() => {
-      window.location.reload()
+      forceHardRefresh()
     }, 2000)
   }
 
