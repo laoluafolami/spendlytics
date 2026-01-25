@@ -28,9 +28,9 @@ const CACHE_LIMITS = {
   images: 50
 };
 
-// Install event - pre-cache static assets and immediately activate
+// Install event - pre-cache static assets but WAIT for user approval before activating
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v5...');
+  console.log('[SW] Installing service worker v5.4...');
 
   event.waitUntil(
     // First, delete ALL old caches to ensure clean slate
@@ -54,8 +54,9 @@ self.addEventListener('install', (event) => {
         });
       })
       .then(() => {
-        console.log('[SW] Skip waiting - activating immediately');
-        return self.skipWaiting();
+        // DON'T call skipWaiting() here!
+        // Wait for user to click "Update Now" which sends SKIP_WAITING message
+        console.log('[SW] Installed and waiting. User must approve update.');
       })
   );
 });
