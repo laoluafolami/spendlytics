@@ -347,6 +347,49 @@ export default function SharePreview({
                   )}
                 </div>
 
+                {/* Global Type Toggle - Set all items as Income or Expense */}
+                <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-700/50">
+                  <p className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-2 text-center">Set all items as:</p>
+                  <div className="flex rounded-lg overflow-hidden border-2 border-purple-300 dark:border-purple-600">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setItems(prev => prev.map(item => ({
+                          ...item,
+                          type: 'expense',
+                          category: EXPENSE_CATEGORIES.includes(item.category as typeof EXPENSE_CATEGORIES[number]) ? item.category : EXPENSE_CATEGORIES[0]
+                        })))
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition-all ${
+                        items.every(i => i.type === 'expense')
+                          ? 'bg-red-500 text-white'
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20'
+                      }`}
+                    >
+                      <ArrowDownCircle size={18} />
+                      EXPENSE
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setItems(prev => prev.map(item => ({
+                          ...item,
+                          type: 'income',
+                          category: INCOME_CATEGORIES.includes(item.category as typeof INCOME_CATEGORIES[number]) ? item.category : INCOME_CATEGORIES[0]
+                        })))
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition-all ${
+                        items.every(i => i.type === 'income')
+                          ? 'bg-green-500 text-white'
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20'
+                      }`}
+                    >
+                      <ArrowUpCircle size={18} />
+                      INCOME
+                    </button>
+                  </div>
+                </div>
+
                 {/* Category suggestion */}
                 {showCategorySuggestion && suggestedCategories.length > 0 && onAddCategory && (
                   <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl">
