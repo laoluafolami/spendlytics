@@ -29,7 +29,7 @@ export default function Settings() {
   const [checkingForUpdates, setCheckingForUpdates] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'available' | 'up-to-date' | 'error'>('idle')
   const [updateMessage, setUpdateMessage] = useState<string | null>(null)
-  const APP_VERSION = '5.10' // Should match sw.js CACHE_VERSION
+  const APP_VERSION = '5.11' // Should match sw.js CACHE_VERSION
 
   // Check backup status on mount
   useEffect(() => {

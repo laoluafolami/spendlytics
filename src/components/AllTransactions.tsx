@@ -42,7 +42,10 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
   }, [user])
 
   const loadData = async () => {
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
     try {
       setLoading(true)

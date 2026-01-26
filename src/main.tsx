@@ -216,44 +216,44 @@ const registerServiceWorker = async () => {
 
 // Update changelog - edit this when releasing new versions
 const UPDATE_CHANGELOG = {
-  version: '5.4',
-  title: 'Smart Capture Upgrade',
+  version: '5.11',
+  title: 'Share & Organize',
   // Short highlights for update notification
   highlights: [
-    { icon: '📷', text: 'Better receipt scanning accuracy' },
-    { icon: '💰', text: 'Add income directly from captures' },
-    { icon: '🏷️', text: 'Create custom categories on-the-fly' },
-    { icon: '📱', text: 'Improved mobile experience' },
+    { icon: '📤', text: 'Share receipts directly - choose Income or Expense' },
+    { icon: '🔄', text: 'One-tap toggle to switch all items between types' },
+    { icon: '📱', text: 'Better mobile layout for shared content' },
+    { icon: '⚡', text: 'Faster, more reliable updates' },
   ],
   // Detailed tips for post-update welcome screen
   tips: [
     {
-      icon: '📸',
-      title: 'Snap Any Receipt',
-      description: 'Take a photo or upload an image — our enhanced OCR instantly extracts amounts, dates, and merchant info.',
-      color: '#22d3ee',
-      colorEnd: '#3b82f6'
-    },
-    {
-      icon: '🔄',
-      title: 'Income or Expense? You Choose',
-      description: 'Toggle between income and expense right in the capture screen. Perfect for tracking refunds or payments received.',
-      color: '#10b981',
-      colorEnd: '#22d3ee'
-    },
-    {
-      icon: '✨',
-      title: 'Create Categories Instantly',
-      description: 'Don\'t see the right category? Tap "+ Add New" and create your own — it\'s saved for future use.',
+      icon: '📤',
+      title: 'Share Any Receipt',
+      description: 'Share photos or PDFs directly to WealthPulse. A prominent toggle lets you choose Income or Expense for all items at once.',
       color: '#a855f7',
       colorEnd: '#ec4899'
     },
     {
-      icon: '⚡',
-      title: 'Lightning-Fast Updates',
-      description: 'The app now updates automatically in the background. You\'ll always have the latest features!',
+      icon: '🔄',
+      title: 'Quick Type Toggle',
+      description: 'See the big EXPENSE / INCOME buttons at the top? Tap to instantly switch all shared items to that type.',
+      color: '#10b981',
+      colorEnd: '#22d3ee'
+    },
+    {
+      icon: '✏️',
+      title: 'Edit Individual Items',
+      description: 'Need to change just one item? Tap it to edit the amount, category, or type individually.',
       color: '#f59e0b',
       colorEnd: '#ef4444'
+    },
+    {
+      icon: '✅',
+      title: 'Select What to Add',
+      description: 'Use checkboxes to select which items to import. Deselect any you don\'t want to track.',
+      color: '#22d3ee',
+      colorEnd: '#3b82f6'
     }
   ]
 }

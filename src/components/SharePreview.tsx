@@ -232,7 +232,7 @@ export default function SharePreview({
         <div className="flex-1 min-h-[10vh]" onClick={handleClose} />
 
         {/* Bottom sheet container */}
-        <div className="relative bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl animate-slide-up overflow-hidden flex flex-col" style={{ maxHeight: 'calc(90vh - env(safe-area-inset-bottom, 0px))' }}>
+        <div className="relative bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl animate-slide-up overflow-hidden flex flex-col" style={{ maxHeight: '85vh' }}>
           {/* Pull indicator */}
           <div className="flex justify-center pt-3 pb-2">
             <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />

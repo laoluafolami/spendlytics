@@ -4,7 +4,7 @@
  * v5: Aggressive cache clearing and instant updates
  */
 
-const CACHE_VERSION = 'v5.10';
+const CACHE_VERSION = 'v5.11';
 const STATIC_CACHE = `wealthpulse-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `wealthpulse-dynamic-${CACHE_VERSION}`;
 const SHARE_CACHE = `wealthpulse-share-${CACHE_VERSION}`;
