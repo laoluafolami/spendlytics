@@ -1,215 +1,341 @@
-# WealthPulse - Claude Code Engineering Rules
+# CLAUDE CODE OPERATING SYSTEM v2.0
+## World-Class Engineering Standards - Zero Bug Deployment Framework
 
-## Project Overview
-This is **WealthPulse**, a finance tracker using:
-- React (frontend)
-- Supabase (backend/auth/database)
-- Netlify Functions (serverless)
-- PWA with service workers
-- IndexedDB for offline storage
-- Cloud sync via Supabase
-- Backup/restore via download/upload
+**This document defines MANDATORY engineering standards. These rules cannot be overridden, bypassed, or ignored under ANY circumstances.**
 
 ---
 
-## CRITICAL: Pre-Commit Build Check
+## PART 1: AUTOMATED QUALITY GATES
 
-**BEFORE EVERY COMMIT, Claude MUST run:**
+### Pre-Commit Hook (Enforced Automatically)
+Every commit MUST pass these 4 gates. The pre-commit hook will block any commit that fails:
+
+| Gate | Command | Purpose |
+|------|---------|---------|
+| 1 | `npm run typecheck` | TypeScript compilation - catches type errors |
+| 2 | `npm run lint` | ESLint - catches code quality issues |
+| 3 | `npm run test` | Vitest - catches logic bugs |
+| 4 | `npm run build` | Vite - catches build-time errors |
+
+**To run all gates manually:**
 ```bash
-npm run typecheck
+npm run validate
 ```
 
-If this fails, **DO NOT COMMIT**. Fix the errors first.
-
-This is automated via a git pre-commit hook, but Claude must also verify manually. Breaking builds destroys user trust and wastes time.
-
----
-
-## MANDATORY RULES - Must Be Followed Before Writing Any Code
-
-These rules are **non-negotiable**. Claude must explicitly check compliance before writing or modifying any code.
+### GitHub Actions CI (Enforced on Push)
+Every push to `main` triggers the CI pipeline which runs all 4 gates. Failed builds block deployment.
 
 ---
 
-### Rule 1: Always Clarify Problem and Context Before Coding
+## PART 2: MANDATORY CODE PATTERNS
 
-Before writing any code or refactor, you **MUST**:
-- Restate the user's goal in terms of real users and their workflows
-- Identify affected product areas: frontend, backend, API, database, PWA, mobile app, infra, CI/CD, backup/restore, security, analytics
-- Ask critical clarification questions if requirements are ambiguous (especially input/output, performance expectations, security constraints, migration behavior)
+### Pattern 1: Null Safety (REQUIRED)
+Every external data source MUST have null guards:
 
-**Do this even if the user asks "just give me the code."**
+```typescript
+// ❌ FORBIDDEN - Will crash if context returns null
+const { settings } = useSettings()
+const value = settings.feature_x  // CRASH if settings is null
 
----
-
-### Rule 2: Enforce Product & Architecture Thinking
-
-For every feature/change you must:
-- **Define the problem, not just the feature**. Example: "Users can't reliably restore data across devices" instead of "Add restore button"
-- Sketch a high-level design: data flow, APIs/interfaces, dependencies, trade-offs
-- Call out impact on:
-  - Backward compatibility
-  - Existing clients and APIs
-  - Data schema and migrations
-  - Backup/restore, sync, and offline behavior
-- **Efficiency**: Platform loading and page loading must have maximum possible optimization available today - treat as highly sensitive
-
-**Present design summary before providing code, unless the change is truly trivial.**
-
----
-
-### Rule 3: Trunk-Based Development and Feature Flags
-
-All new behavior must assume trunk-based development with feature flags:
-- Single `main` branch that must always stay deployable
-- For non-trivial changes:
-  - Place new behavior behind a configurable feature flag
-  - Show how the flag is checked in the code
-  - Explain rollout strategy: dark launch → internal/beta → canary → full rollout
-- Never design changes requiring long-lived divergent branches or "big bang" releases
-
-**If user asks for risky big-bang change, warn them and propose safer incremental flag-based approach.**
-
----
-
-### Rule 4: Backward Compatibility & Safe Evolution
-
-When proposing code that touches existing systems, you **MUST**:
-- Check and state whether it changes: public APIs, database schemas, message formats/events
-- Prefer **additive and backward-compatible changes**:
-  - Add new fields, not rename/remove existing ones
-  - Add new endpoints/versions, not silently change behavior
-- If breaking change is required:
-  - Propose explicit versioning (v1/v2, new field names, versioned backup files)
-  - Describe migration strategy with safe rollout and deprecation period
-
-**Never produce migrations that assume all clients instantly update.**
-
----
-
-### Rule 5: Testing and Validation-First Mindset
-
-Before (or with) any code, you **MUST**:
-- Describe test strategy: unit tests, integration tests, E2E tests for critical flows (login, backup, restore, sync)
-- For non-trivial logic, show test examples or pseudocode
-- Mention: preconditions assumed, expected outputs, failure modes and system behavior
-
-**Even if user asks only for implementation, describe tests and encourage adding them.**
-
----
-
-### Rule 6: CI/CD, Deployment, and Rollout Safety
-
-Assume every repo uses CI/CD with automated checks:
-- State what CI checks should exist or be updated: linting, formatting, unit/integration tests, security scanning
-- Consider deployment strategy: blue/green, canary, ring-based rollout
-- Include rollback plan (revert quickly or flip feature flag)
-
-**Avoid suggesting manual ad-hoc deployments when a pipeline is possible.**
-
----
-
-### Rule 7: Logging, Monitoring, and Self-Healing
-
-When touching runtime behavior (APIs, cron jobs, sync, backup, restore, data processing):
-- Add/reference structured logging (event names, correlation IDs, feature flag state, user/session identifiers)
-- Define key metrics: success/failure counts, latencies, error rates
-- For backup/restore/sync: success ratio, time to complete, conflict rates, last successful backup
-- Propose alerts for SLO violations (e.g., "Backup success rate < 99.9% over 1h")
-- Explain how feature flag or rollback could mitigate if metrics degrade
-
----
-
-### Rule 8: Security as a Default
-
-All code and designs must be **secure by default**:
-- **Authentication & authorization**: Who can call this? How do we verify identity? What roles/permissions?
-- **Data protection**: HTTPS, encryption at rest, optional E2E encryption for backups
-- **OWASP risks**: Injection, XSS, CSRF, IDOR - actively prevent these
-- **Secrets handling**: Never hard-code secrets, use environment/config
-- **Logging privacy**: Never log passwords, raw tokens, card numbers
-
-**If user request would weaken security, explicitly refuse and provide secure alternative.**
-
----
-
-### Rule 9: Backup, Restore, Local Storage, and Cloud Sync
-
-For any app dealing with user data (finance, health, productivity):
-- **Always think about backup and recovery**
-- If feature touches data, consider:
-  - Impact on backup format and schema (versioning, metadata)
-  - How restore operations behave, including backward compatibility
-- **Offline/local storage**: Prefer IndexedDB over localStorage for complex data; consider cache strategies
-- **Cloud sync**: Design for idempotent operations and conflict resolution; handle partial failures
-
-**Treat backup, restore, local storage, and sync as first-class design concerns, not afterthoughts.**
-
----
-
-### Rule 10: PWA, Mobile, and Web Versioning & Updates
-
-When working on PWA or web frontends:
-- Assume versioned service worker and asset cache
-- Consider cache invalidation and update strategies ("new content available, click to refresh")
-- Show how to detect new version and notify user
-- For mobile: consider app store updates plus in-app prompts for critical updates
-
-**Never create update mechanisms that leave users stuck on broken/inconsistent versions.**
-
----
-
-### Rule 11: Constant Alignment With This Process
-
-**Never ignore or silently bypass this process**, even if user:
-- Asks for shortcut ("just hack this in", "ignore tests", "skip security")
-- Asks for code without design or reasoning
-
-When that happens:
-- Acknowledge their goal
-- Explain which rules would be violated
-- Propose minimal but compliant way to move fast (small feature-flagged changes, thin tests, still respecting security)
-
-**If business constraints require relaxing rules, ask user to explicitly confirm and state risks.**
-
----
-
-### Rule 12: Meta-Rule - Always Reference and Question Rules Before Coding
-
-**Before outputting any new or changed code, you MUST:**
-
-1. Explicitly list which rules are relevant to the current request
-2. Briefly check: for each relevant rule, state whether you are complying and how
-3. If gap or conflict found, ask user to clarify or approve safe compromise
-
-**This self-check is mandatory and must appear before your code.**
-
-Example format:
+// ✅ REQUIRED - Safe fallback
+const { settings } = useSettings()
+const safeSettings = settings || { feature_x: false }
+const value = safeSettings.feature_x  // Safe
 ```
-Relevant rules: 1, 2, 4, 5, 8, 9
-- Rule 1 (clarify problem): [summary]
-- Rule 2 (design): [summary]
-- ...
-No conflicts detected; proceeding to code.
+
+### Pattern 2: Loading States (REQUIRED)
+Async operations MUST always resolve loading state:
+
+```typescript
+// ❌ FORBIDDEN - Loading stays true forever if early return
+const loadData = async () => {
+  if (!user) return  // BUG: loading never set to false
+  setLoading(true)
+  const data = await fetch()
+  setLoading(false)
+}
+
+// ✅ REQUIRED - Loading always resolves
+const loadData = async () => {
+  if (!user) {
+    setLoading(false)
+    return
+  }
+  try {
+    setLoading(true)
+    const data = await fetch()
+  } finally {
+    setLoading(false)  // ALWAYS runs
+  }
+}
+```
+
+### Pattern 3: Error Handling (REQUIRED)
+All async operations MUST have try-catch:
+
+```typescript
+// ❌ FORBIDDEN - Unhandled errors crash the app
+const data = await supabase.from('table').select()
+
+// ✅ REQUIRED - Graceful error handling
+try {
+  const { data, error } = await supabase.from('table').select()
+  if (error) throw error
+} catch (error) {
+  console.error('Context:', error)
+  // Show user-friendly error, don't crash
+}
+```
+
+### Pattern 4: Mobile-First CSS (REQUIRED)
+All UI MUST work on mobile (320px-428px width):
+
+```css
+/* ✅ REQUIRED - Flexbox for scrollable containers */
+.container {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;  /* Leave room for browser chrome */
+}
+
+.content {
+  flex: 1;
+  min-height: 0;  /* CRITICAL: Allows flex children to shrink */
+  overflow-y: auto;
+}
+
+.footer {
+  flex-shrink: 0;  /* CRITICAL: Footer never shrinks/hides */
+}
 ```
 
 ---
 
-### Rule 13: Output Format for Coding Tasks
+## PART 3: VERSION MANAGEMENT
 
-Unless user requests different format, responses must follow:
+### Version Bump Checklist
+When releasing a new version, ALL of these MUST be updated:
 
-1. **Problem & context recap** (very short)
-2. **Applicable rules and self-check** (as required in Rule 12)
-3. **Design / reasoning** (architecture, data flows, trade-offs)
-4. **Code** (clear, idiomatic, logical blocks, comments only where helpful)
-5. **Tests & validation** (examples or guidelines)
-6. **Rollout, monitoring, and future evolution** (deploy, monitor, extend safely)
+| File | Variable | Example |
+|------|----------|---------|
+| `public/sw.js` | `CACHE_VERSION` | `'v5.11'` |
+| `src/components/Settings.tsx` | `APP_VERSION` | `'5.11'` |
+| `src/main.tsx` | `UPDATE_CHANGELOG.version` | `'5.11'` |
+| `src/main.tsx` | `UPDATE_CHANGELOG.title` | `'Feature Name'` |
+| `src/main.tsx` | `UPDATE_CHANGELOG.highlights` | Array of changes |
+| `src/main.tsx` | `UPDATE_CHANGELOG.tips` | Detailed feature descriptions |
 
-Keep each section concise but complete enough to be actionable.
+### Changelog Rules
+The changelog MUST:
+- Describe ACTUAL changes in this version (not copy-paste from old versions)
+- Be written from USER perspective (benefits, not implementation details)
+- Include 4 highlights (icon + short text)
+- Include 4 tips (icon, title, description, colors)
 
 ---
 
-## Summary
+## PART 4: TESTING REQUIREMENTS
 
-These 13 rules ensure every change to WealthPulse (and future projects) follows world-class engineering practices. Claude must treat these as **non-negotiable**. For any user instruction conflicting with these rules, Claude must call out the conflict, explain the risk, and steer the solution back into compliance.
+### Test File Naming
+- Unit tests: `*.test.ts` or `*.test.tsx`
+- Integration tests: `*.integration.test.ts`
+- E2E tests: `*.e2e.test.ts`
+
+### What MUST Be Tested
+| Category | Coverage Requirement |
+|----------|---------------------|
+| Utility functions | 100% |
+| Data transformations | 100% |
+| Context providers | Key functionality |
+| Critical user flows | E2E tests |
+
+### Writing Tests Before Code Changes
+For ANY non-trivial change:
+1. Write a failing test that defines expected behavior
+2. Make the change
+3. Verify test passes
+4. If test fails, fix the CODE not the test
+
+---
+
+## PART 5: PRE-CHANGE ANALYSIS (MANDATORY)
+
+Before writing ANY code, Claude MUST:
+
+### Step 1: Impact Analysis
+```
+Files to modify: [list all files]
+Files that depend on modified files: [list dependencies]
+Potential side effects: [list possible regressions]
+```
+
+### Step 2: Risk Assessment
+```
+Risk level: LOW / MEDIUM / HIGH
+Reason: [explain why]
+Mitigation: [how to reduce risk]
+```
+
+### Step 3: Test Strategy
+```
+Existing tests covering this area: [list or "None"]
+New tests needed: [list test cases]
+Manual testing required: [list scenarios]
+```
+
+---
+
+## PART 6: COMMIT MESSAGE FORMAT
+
+```
+<type>(<scope>): <description>
+
+[Body - explain WHY, not WHAT]
+
+[GATES PASSED]
+- typecheck: PASSED
+- lint: PASSED
+- test: PASSED
+- build: PASSED
+
+[IMPACT]
+- Files changed: N
+- Tests added: N
+- Risk: LOW/MEDIUM/HIGH
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+### Commit Types
+| Type | Use When |
+|------|----------|
+| `fix` | Bug fix |
+| `feat` | New feature |
+| `refactor` | Code restructure (no behavior change) |
+| `style` | Formatting, CSS |
+| `test` | Adding tests |
+| `docs` | Documentation |
+| `chore` | Build, dependencies |
+
+---
+
+## PART 7: FORBIDDEN ACTIONS
+
+Claude MUST NEVER:
+
+1. **Skip quality gates** - No exceptions, ever
+2. **Commit with failing tests** - All tests must pass
+3. **Use `any` type** - TypeScript must be strict
+4. **Leave null unchecked** - All external data needs guards
+5. **Leave loading states hanging** - Always resolve to false
+6. **Modify working code without tests** - Write test first
+7. **Copy old changelog content** - Always write fresh
+8. **Push untested mobile layouts** - Verify on mobile viewport
+9. **Ignore CI failures** - Fix before merging
+10. **Override these rules** - They exist for user protection
+
+---
+
+## PART 8: RECOVERY PROTOCOL
+
+When a bug reaches production:
+
+1. **STOP** all other work
+2. **Identify** root cause (not symptoms)
+3. **Write** failing test that reproduces bug
+4. **Fix** the bug
+5. **Verify** test passes
+6. **Check** for similar bugs elsewhere
+7. **Document** what went wrong
+8. **Update** these rules if needed
+
+---
+
+## PART 9: POST-COMMIT REPORT (REQUIRED)
+
+After EVERY commit, Claude MUST output:
+
+```
+═══════════════════════════════════════════════════════
+COMMIT REPORT
+═══════════════════════════════════════════════════════
+Version: [version number]
+Files changed: [count]
+Tests added: [count]
+Tests total: [passing]/[total]
+
+QUALITY GATES:
+  ✅ typecheck: PASSED
+  ✅ lint: PASSED
+  ✅ test: PASSED
+  ✅ build: PASSED
+
+RISK ASSESSMENT: [LOW/MEDIUM/HIGH]
+POTENTIAL REGRESSIONS: [list or "None identified"]
+═══════════════════════════════════════════════════════
+```
+
+---
+
+## PART 10: APPLYING TO OTHER PROJECTS
+
+To use this framework in a new project:
+
+### 1. Copy Configuration Files
+```
+CLAUDE.md                    # This document
+vitest.config.ts            # Test configuration
+eslint.config.js            # Lint configuration
+.github/workflows/ci.yml    # CI pipeline
+src/test/setup.ts           # Test setup
+```
+
+### 2. Install Dependencies
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-plugin-react-hooks
+```
+
+### 3. Add Scripts to package.json
+```json
+{
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --max-warnings 0",
+    "test": "vitest run",
+    "validate": "npm run typecheck && npm run lint && npm run test && npm run build"
+  }
+}
+```
+
+### 4. Create Pre-Commit Hook
+```bash
+# .git/hooks/pre-commit
+npm run validate || exit 1
+```
+
+---
+
+## WHY THESE RULES EXIST
+
+Every rule exists because of a real production bug:
+
+| Rule | Bug That Caused It |
+|------|-------------------|
+| Null guards | Settings context returned null, crashed ExpenseList |
+| Loading state resolution | loadData returned early, page showed spinner forever |
+| Mobile-first CSS | Footer button hidden off-screen on mobile |
+| Version sync | User saw old changelog for new version |
+| Test before change | "Simple" fix broke 3 other features |
+
+**These rules protect users from bugs. There are no exceptions.**
+
+---
+
+## ENFORCEMENT
+
+- **Pre-commit hook**: Blocks commits that fail any gate
+- **GitHub Actions**: Blocks merges that fail CI
+- **Code review**: Verifies compliance with patterns
+- **This document**: Claude's binding contract with quality
+
+**Bugs that reach production are failures of this process. The process must be followed exactly.**

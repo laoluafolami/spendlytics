@@ -1,0 +1,70 @@
+name: CI Quality Gates
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Gate 1 - TypeScript Check
+        run: |
+          echo "🔍 Running TypeScript compilation check..."
+          npm run typecheck
+          echo "✅ TypeScript check passed"
+
+      - name: Gate 2 - ESLint Check
+        run: |
+          echo "🔍 Running ESLint..."
+          npm run lint
+          echo "✅ Lint check passed"
+
+      - name: Gate 3 - Unit Tests
+        run: |
+          echo "🔍 Running unit tests..."
+          npm run test
+          echo "✅ All tests passed"
+
+      - name: Gate 4 - Production Build
+        run: |
+          echo "🔍 Building for production..."
+          npm run build
+          echo "✅ Build successful"
+
+      - name: All Gates Passed
+        run: |
+          echo "🎉 All quality gates passed!"
+          echo "✅ typecheck: PASSED"
+          echo "✅ lint: PASSED"
+          echo "✅ test: PASSED"
+          echo "✅ build: PASSED"
+
+  # Block deployment if any gate fails
+  deployment-gate:
+    name: Deployment Gate
+    needs: quality-gates
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deployment Approved
+        run: |
+          echo "✅ All quality gates passed - deployment approved"
+          echo "This commit is safe to deploy to production"
