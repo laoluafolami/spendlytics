@@ -16,7 +16,7 @@
  * 3. Set orderBy if you want sorted results
  */
 export const SUPABASE_TABLES = {
-  // Core financial data - uses 'expenses' table with user_id (main app tables)
+  // Core financial data - verified against actual app usage
   expenses: {
     table: 'expenses',
     sessionField: 'user_id',
@@ -30,19 +30,19 @@ export const SUPABASE_TABLES = {
     description: 'All income entries'
   },
   budgets: {
-    table: 'budgets',
+    table: 'app_budgets',
     sessionField: 'user_id',
     orderBy: null,
     description: 'Budget allocations by category'
   },
   savingsGoals: {
-    table: 'savings_goals',
+    table: 'app_savings_goals',
     sessionField: 'user_id',
     orderBy: null,
     description: 'Savings goals and progress'
   },
 
-  // Net worth tracking - uses user_id for authenticated users
+  // Net worth tracking
   assets: {
     table: 'assets',
     sessionField: 'user_id',
@@ -70,13 +70,13 @@ export const SUPABASE_TABLES = {
 
   // App configuration
   filterPresets: {
-    table: 'filter_presets',
+    table: 'app_filter_presets',
     sessionField: 'user_id',
     orderBy: null,
     description: 'Saved filter configurations'
   },
   settings: {
-    table: 'user_settings',
+    table: 'app_settings',
     sessionField: 'user_id',
     orderBy: null,
     description: 'User feature settings'
