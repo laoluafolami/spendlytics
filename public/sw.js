@@ -4,16 +4,16 @@
  * v5: Aggressive cache clearing and instant updates
  */
 
-const CACHE_VERSION = 'v5.12';
+const CACHE_VERSION = 'v5.13';
 const STATIC_CACHE = `wealthpulse-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `wealthpulse-dynamic-${CACHE_VERSION}`;
 const SHARE_CACHE = `wealthpulse-share-${CACHE_VERSION}`;
 const IMAGE_CACHE = `wealthpulse-images-${CACHE_VERSION}`;
 
 // Core app shell - always cache these
+// NOTE: index.html and / are NOT in static assets - they use Network First
+// to ensure users always get the latest HTML that references fresh JS/CSS bundles
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
@@ -54,9 +54,10 @@ self.addEventListener('install', (event) => {
         });
       })
       .then(() => {
-        // DON'T call skipWaiting() here!
-        // Wait for user to click "Update Now" which sends SKIP_WAITING message
-        console.log('[SW] Installed and waiting. User must approve update.');
+        // AUTOMATICALLY activate new service worker for seamless updates
+        // Users shouldn't need to click "Update Now" or refresh
+        console.log('[SW] Installed, activating immediately for seamless update');
+        return self.skipWaiting();
       })
   );
 });
@@ -134,8 +135,13 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Handle different asset types with appropriate strategies
-  if (isStaticAsset(url.pathname)) {
-    // Static assets: Cache First
+  // IMPORTANT: Navigation requests FIRST to ensure fresh index.html
+  if (isNavigationRequest(request)) {
+    // Navigation: Network First - CRITICAL for seamless updates
+    // Always fetch fresh HTML so it references latest JS/CSS bundles
+    event.respondWith(navigationHandler(request));
+  } else if (isStaticAsset(url.pathname)) {
+    // Static assets (JS/CSS): Cache First - OK because filenames are content-hashed
     event.respondWith(cacheFirst(request, STATIC_CACHE));
   } else if (isImageAsset(url.pathname)) {
     // Images: Cache First with network fallback
@@ -143,9 +149,6 @@ self.addEventListener('fetch', (event) => {
   } else if (isApiRequest(url.pathname)) {
     // API calls: Network First with cache fallback
     event.respondWith(networkFirst(request, DYNAMIC_CACHE));
-  } else if (isNavigationRequest(request)) {
-    // Navigation: Network First, fall back to cached index.html
-    event.respondWith(navigationHandler(request));
   } else {
     // Default: Stale While Revalidate
     event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));

@@ -216,42 +216,42 @@ const registerServiceWorker = async () => {
 
 // Update changelog - edit this when releasing new versions
 const UPDATE_CHANGELOG = {
-  version: '5.12',
-  title: 'Mobile-First Redesign',
+  version: '5.13',
+  title: 'Seamless Updates & Add Expense',
   // Short highlights for update notification
   highlights: [
-    { icon: '📱', text: 'Native app feel - edge-to-edge cards on mobile' },
-    { icon: '🔧', text: 'Fixed: Custom categories now show when editing' },
-    { icon: '✨', text: 'Add Asset opens as a sleek modal on mobile' },
-    { icon: '👆', text: 'Touch-friendly buttons and bottom sheet filters' },
+    { icon: '🔄', text: 'Seamless updates - no more manual refresh needed' },
+    { icon: '➕', text: 'Add Expense button on Expenses page' },
+    { icon: '📱', text: 'Mobile-first design with native app feel' },
+    { icon: '🔧', text: 'Fixed: Custom categories in edit mode' },
   ],
   // Detailed tips for post-update welcome screen
   tips: [
     {
-      icon: '📱',
-      title: 'Native Mobile Experience',
-      description: 'Expenses and Transactions pages now feel like a native iOS/Android app with edge-to-edge cards and smooth touch interactions.',
+      icon: '🔄',
+      title: 'Seamless Updates',
+      description: 'App updates now apply automatically! No more uninstalling or clearing cache to see new features.',
       color: '#3b82f6',
       colorEnd: '#8b5cf6'
+    },
+    {
+      icon: '➕',
+      title: 'Quick Add Expense',
+      description: 'Floating button on mobile and header button on desktop to quickly add expenses from the Expenses page.',
+      color: '#10b981',
+      colorEnd: '#22d3ee'
+    },
+    {
+      icon: '📱',
+      title: 'Native Mobile Feel',
+      description: 'Edge-to-edge cards, touch-friendly buttons, and bottom sheet filters for a true app experience.',
+      color: '#f59e0b',
+      colorEnd: '#ef4444'
     },
     {
       icon: '🔧',
       title: 'Categories Fixed',
       description: 'Custom categories you create now properly appear when editing expenses. No more missing categories!',
-      color: '#10b981',
-      colorEnd: '#22d3ee'
-    },
-    {
-      icon: '✨',
-      title: 'Beautiful Asset Modal',
-      description: 'Adding assets on mobile now opens a centered modal overlay instead of scrolling the page.',
-      color: '#f59e0b',
-      colorEnd: '#ef4444'
-    },
-    {
-      icon: '👆',
-      title: 'Bottom Sheet Filters',
-      description: 'Filters now slide up from the bottom on mobile - easier to reach and more natural to use.',
       color: '#22d3ee',
       colorEnd: '#3b82f6'
     }
