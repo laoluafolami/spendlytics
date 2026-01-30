@@ -565,9 +565,10 @@ export default function ExpenseList({ expenses, onDelete, onEdit, onAdd }: Expen
         </div>
       )}
 
-      <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl blur-2xl opacity-10"></div>
-        <div className="relative rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl overflow-hidden">
+      {/* Expense List - Mobile Card Layout / Desktop Table */}
+      <div className="group relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-500 rounded-3xl blur-2xl opacity-10 hidden md:block"></div>
+        <div className="relative md:rounded-3xl bg-white/60 dark:bg-gray-800/60 md:backdrop-blur-xl md:border md:border-white/20 md:dark:border-gray-700/50 md:shadow-xl overflow-hidden">
           {filteredExpenses.length === 0 ? (
             <div className="text-center py-12 px-6">
               <Inbox className="mx-auto mb-4 text-gray-400 dark:text-gray-600" size={48} />
@@ -575,10 +576,10 @@ export default function ExpenseList({ expenses, onDelete, onEdit, onAdd }: Expen
             </div>
           ) : (
             <>
-              {/* Mobile Card Layout - Edge to Edge */}
-              <div className="block md:hidden divide-y divide-gray-200/30 dark:divide-gray-700/30 -mx-3 sm:mx-0">
+              {/* Mobile Card Layout */}
+              <div className="block md:hidden divide-y divide-gray-200/30 dark:divide-gray-700/30">
                 {filteredExpenses.map((expense) => (
-                  <div key={expense.id} className="px-4 py-3 active:bg-gray-100 dark:active:bg-gray-700/60 transition-colors">
+                  <div key={expense.id} className="p-4 active:bg-gray-100 dark:active:bg-gray-700/40 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 dark:text-white truncate">
@@ -621,38 +622,36 @@ export default function ExpenseList({ expenses, onDelete, onEdit, onAdd }: Expen
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-200/30 dark:border-gray-700/30">
+                    <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-200/30 dark:border-gray-700/30">
                       {safeSettings.feature_receipts && expense.receipt_url && (
                         <a
                           href={expense.receipt_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 text-sm font-medium mr-auto"
                         >
                           <Receipt size={14} />
-                          View Receipt
+                          Receipt
                         </a>
                       )}
-                      <div className="flex items-center gap-2 ml-auto">
-                        <button
-                          onClick={() => onEdit(expense)}
-                          className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] rounded-xl bg-blue-500/10 active:bg-blue-500/30 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors active:scale-95"
-                        >
-                          <Edit2 size={16} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this expense?')) {
-                              onDelete(expense.id)
-                            }
-                          }}
-                          className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] rounded-xl bg-red-500/10 active:bg-red-500/30 text-red-600 dark:text-red-400 text-sm font-medium transition-colors active:scale-95"
-                        >
-                          <Trash2 size={16} />
-                          Delete
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => onEdit(expense)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 active:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-all"
+                      >
+                        <Edit2 size={14} />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this expense?')) {
+                            onDelete(expense.id)
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 active:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium transition-all"
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
                     </div>
                   </div>
                 ))}

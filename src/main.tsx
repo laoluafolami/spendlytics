@@ -216,35 +216,35 @@ const registerServiceWorker = async () => {
 
 // Update changelog - edit this when releasing new versions
 const UPDATE_CHANGELOG = {
-  version: '5.13',
-  title: 'Seamless Updates & Add Expense',
+  version: '5.14',
+  title: 'Manual Entry & Mobile Redesign',
   // Short highlights for update notification
   highlights: [
-    { icon: '🔄', text: 'Seamless updates - no more manual refresh needed' },
-    { icon: '➕', text: 'Add Expense button on Expenses page' },
-    { icon: '📱', text: 'Mobile-first design with native app feel' },
+    { icon: '✍️', text: 'Manual Entry option when adding expenses' },
+    { icon: '📱', text: 'Redesigned Expenses & Transactions for mobile' },
+    { icon: '🔄', text: 'Seamless updates - no manual refresh needed' },
     { icon: '🔧', text: 'Fixed: Custom categories in edit mode' },
   ],
   // Detailed tips for post-update welcome screen
   tips: [
     {
-      icon: '🔄',
-      title: 'Seamless Updates',
-      description: 'App updates now apply automatically! No more uninstalling or clearing cache to see new features.',
+      icon: '✍️',
+      title: 'Add Expense Choice',
+      description: 'Tap Add Expense to choose between Smart Capture (AI receipt scanning) or Manual Entry (traditional form).',
       color: '#3b82f6',
       colorEnd: '#8b5cf6'
     },
     {
-      icon: '➕',
-      title: 'Quick Add Expense',
-      description: 'Floating button on mobile and header button on desktop to quickly add expenses from the Expenses page.',
+      icon: '📱',
+      title: 'Mobile-First Design',
+      description: 'Expenses and Transactions pages now have full-width cards on mobile for a true native app feel.',
       color: '#10b981',
       colorEnd: '#22d3ee'
     },
     {
-      icon: '📱',
-      title: 'Native Mobile Feel',
-      description: 'Edge-to-edge cards, touch-friendly buttons, and bottom sheet filters for a true app experience.',
+      icon: '🔄',
+      title: 'Seamless Updates',
+      description: 'App updates now apply automatically! No more uninstalling or clearing cache to see new features.',
       color: '#f59e0b',
       colorEnd: '#ef4444'
     },

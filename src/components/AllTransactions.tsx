@@ -598,14 +598,12 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
 
       {/* Transactions List */}
       <div className="group relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-500 rounded-3xl blur-2xl opacity-10"></div>
-        <div className="relative rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-500 rounded-3xl blur-2xl opacity-10 hidden md:block"></div>
+        <div className="relative md:rounded-3xl bg-white/60 dark:bg-gray-800/60 md:backdrop-blur-xl md:border md:border-white/20 md:dark:border-gray-700/50 md:shadow-xl overflow-hidden">
           <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Showing {filteredTransactions.length} transactions
-              </p>
-            </div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Showing {filteredTransactions.length} transactions
+            </p>
           </div>
 
           {filteredTransactions.length === 0 ? (
@@ -615,13 +613,13 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
               <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Try adjusting your filters</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200/30 dark:divide-gray-700/30 -mx-3 md:mx-0">
+            <div className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
               {filteredTransactions.map((transaction) => (
                 <div
                   key={`${transaction.source_table}-${transaction.id}`}
-                  className="group/row active:bg-gray-100 dark:active:bg-gray-700/60 md:hover:bg-white/40 md:dark:hover:bg-gray-700/40 transition-colors px-4 py-3 md:p-4"
+                  className="group/row p-4 active:bg-gray-100 dark:active:bg-gray-700/40 md:hover:bg-white/40 md:dark:hover:bg-gray-700/40 transition-colors"
                 >
-                  <div className="flex items-center gap-3 md:gap-4">
+                  <div className="flex items-center gap-3">
                     {/* Type Indicator */}
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                       transaction.type === 'income'
@@ -637,19 +635,10 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
 
                     {/* Details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-gray-900 dark:text-white truncate">
-                          {transaction.description}
-                        </p>
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full hidden md:inline-flex ${
-                          transaction.type === 'income'
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                        }`}>
-                          {transaction.type === 'income' ? 'Income' : 'Expense'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 md:gap-3 mt-1 flex-wrap">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">
+                        {transaction.description}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                           {transaction.category}
                         </span>
@@ -671,16 +660,14 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
                       </p>
                     </div>
 
-                    {/* Actions - Always visible on mobile, hover on desktop */}
-                    <div className="flex items-center gap-1 md:opacity-0 md:group-hover/row:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleDelete(transaction)}
-                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-red-500/10 active:bg-red-500/30 md:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors active:scale-95"
-                        title="Delete"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => handleDelete(transaction)}
+                      className="p-2 rounded-lg bg-red-500/10 active:bg-red-500/20 md:opacity-0 md:group-hover/row:opacity-100 text-red-600 dark:text-red-400 transition-all"
+                      title="Delete"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 </div>
               ))}

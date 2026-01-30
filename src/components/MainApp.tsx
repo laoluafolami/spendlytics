@@ -51,6 +51,9 @@ export default function MainApp() {
   const [sharedData, setSharedData] = useState<SharedData | null>(null)
   const [showSharePreview, setShowSharePreview] = useState(false)
 
+  // Add Expense choice modal state
+  const [showAddExpenseChoice, setShowAddExpenseChoice] = useState(false)
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -561,7 +564,7 @@ export default function MainApp() {
                 onEdit={handleEditExpense}
                 onAdd={() => {
                   setEditingExpense(null)
-                  handleNavigate('capture')
+                  setShowAddExpenseChoice(true)
                 }}
               />
             )}
@@ -784,6 +787,67 @@ export default function MainApp() {
           </button>
         </div>
       </nav>
+
+      {/* Add Expense Choice Modal */}
+      {showAddExpenseChoice && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end md:items-center justify-center animate-fade-in"
+          onClick={() => setShowAddExpenseChoice(false)}
+        >
+          <div
+            className="w-full md:w-auto md:min-w-[320px] bg-white dark:bg-gray-800 rounded-t-3xl md:rounded-2xl shadow-2xl animate-slide-up safe-bottom"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-3 md:hidden" />
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white text-center">
+                Add Expense
+              </h3>
+            </div>
+            <div className="p-4 space-y-3">
+              <button
+                onClick={() => {
+                  setShowAddExpenseChoice(false)
+                  handleNavigate('capture')
+                }}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 active:scale-[0.98] transition-all border border-blue-200/50 dark:border-blue-700/50"
+              >
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                  <Scan className="text-white" size={24} />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-white">Smart Capture</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Scan receipts with AI</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowAddExpenseChoice(false)
+                  handleNavigate('add')
+                }}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 hover:from-green-500/20 hover:to-emerald-500/20 active:scale-[0.98] transition-all border border-green-200/50 dark:border-green-700/50"
+              >
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <FileText className="text-white" size={24} />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-white">Manual Entry</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Enter details manually</p>
+                </div>
+              </button>
+            </div>
+            <div className="p-4 pt-0">
+              <button
+                onClick={() => setShowAddExpenseChoice(false)}
+                className="w-full py-3 text-gray-500 dark:text-gray-400 font-medium active:scale-[0.98] transition-transform"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
