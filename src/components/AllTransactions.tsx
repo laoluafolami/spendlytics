@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { ArrowUpCircle, ArrowDownCircle, Search, Filter, Calendar, Download, TrendingUp, TrendingDown, Wallet, Trash2, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useCurrency } from '../contexts/CurrencyContext'
@@ -36,6 +36,31 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
   const [showFilters, setShowFilters] = useState(false)
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
+
+  // Mobile detection for responsive UI
+  const [isMobile, setIsMobile] = useState(false)
+  const filterSheetRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Lock body scroll when mobile filter sheet is open
+  useEffect(() => {
+    if (showFilters && isMobile) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showFilters, isMobile])
 
   useEffect(() => {
     loadData()
@@ -252,14 +277,14 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Summary Cards - Horizontal scroll on mobile */}
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-3 px-3 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-4 snap-x snap-mandatory hide-scrollbar">
         <div
           onClick={() => onNavigate?.('income')}
-          className="group relative cursor-pointer"
+          className="min-w-[160px] md:min-w-0 snap-start flex-shrink-0 md:flex-shrink group relative cursor-pointer"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
-          <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
+          <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg md:hover:shadow-xl md:hover:-translate-y-1 transition-all active:scale-[0.98]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
                 <ArrowUpCircle className="text-white" size={20} />
@@ -274,10 +299,10 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
 
         <div
           onClick={() => onNavigate?.('expenses')}
-          className="group relative cursor-pointer"
+          className="min-w-[160px] md:min-w-0 snap-start flex-shrink-0 md:flex-shrink group relative cursor-pointer"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-500 rounded-2xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
-          <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
+          <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg md:hover:shadow-xl md:hover:-translate-y-1 transition-all active:scale-[0.98]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
                 <ArrowDownCircle className="text-white" size={20} />
@@ -290,13 +315,13 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
           </div>
         </div>
 
-        <div className="group relative">
+        <div className="min-w-[160px] md:min-w-0 snap-start flex-shrink-0 md:flex-shrink group relative">
           <div className={`absolute inset-0 rounded-2xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity ${
             summary.netCashFlow >= 0
               ? 'bg-gradient-to-br from-blue-500 to-cyan-500'
               : 'bg-gradient-to-br from-orange-500 to-red-500'
           }`}></div>
-          <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg">
+          <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg active:scale-[0.98] transition-transform">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                 summary.netCashFlow >= 0
@@ -319,9 +344,9 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
           </div>
         </div>
 
-        <div className="group relative">
+        <div className="min-w-[160px] md:min-w-0 snap-start flex-shrink-0 md:flex-shrink group relative">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
-          <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg">
+          <div className="relative p-4 rounded-2xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg active:scale-[0.98] transition-transform">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
                 {summary.savingsRate >= 0 ? (
@@ -347,8 +372,8 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
         </div>
       </div>
 
-      {/* Filters */}
-      {showFilters && (
+      {/* Desktop Filters - Inline */}
+      {showFilters && !isMobile && (
         <div className="group relative">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-500 rounded-3xl blur-2xl opacity-10"></div>
           <div className="relative p-6 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl">
@@ -368,7 +393,7 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
                 <select
                   value={dateRange}
                   onChange={(e) => setDateRange(e.target.value as DateRange)}
-                  className="w-full px-3 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                  className="w-full px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
                 >
                   <option value="all">All Time</option>
                   <option value="this_month">This Month</option>
@@ -386,7 +411,7 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
                 <select
                   value={transactionType}
                   onChange={(e) => setTransactionType(e.target.value as TransactionType)}
-                  className="w-full px-3 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                  className="w-full px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
                 >
                   <option value="all">All Transactions</option>
                   <option value="income">Income Only</option>
@@ -400,7 +425,7 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                  className="w-full px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
                 >
                   <option value="all">All Categories</option>
                   {allCategories.map(cat => (
@@ -419,7 +444,7 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
                     placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                    className="w-full pl-9 pr-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
                   />
                 </div>
               </div>
@@ -434,7 +459,7 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
                     type="date"
                     value={customStartDate}
                     onChange={(e) => setCustomStartDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                    className="w-full px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
                   />
                 </div>
                 <div>
@@ -443,11 +468,130 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
                     type="date"
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                    className="w-full px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
                   />
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Filter Bottom Sheet */}
+      {showFilters && isMobile && (
+        <div
+          ref={filterSheetRef}
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => {
+            if (e.target === filterSheetRef.current) {
+              setShowFilters(false)
+            }
+          }}
+        >
+          <div className="absolute inset-x-0 bottom-0 bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[80vh] overflow-y-auto animate-slide-up safe-bottom">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="font-bold text-gray-900 dark:text-white">Filters</h3>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl active:scale-95 transition-transform"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              {/* Date Range */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date Range</label>
+                <select
+                  value={dateRange}
+                  onChange={(e) => setDateRange(e.target.value as DateRange)}
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                >
+                  <option value="all">All Time</option>
+                  <option value="this_month">This Month</option>
+                  <option value="last_month">Last Month</option>
+                  <option value="last_3_months">Last 3 Months</option>
+                  <option value="last_6_months">Last 6 Months</option>
+                  <option value="this_year">This Year</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+              </div>
+
+              {/* Custom Date Range */}
+              {dateRange === 'custom' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date</label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date</label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Transaction Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
+                <select
+                  value={transactionType}
+                  onChange={(e) => setTransactionType(e.target.value as TransactionType)}
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                >
+                  <option value="all">All Transactions</option>
+                  <option value="income">Income Only</option>
+                  <option value="expense">Expenses Only</option>
+                </select>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                >
+                  <option value="all">All Categories</option>
+                  {allCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
+                <div className="relative">
+                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search transactions..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowFilters(false)}
+                className="w-full px-4 py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium active:scale-[0.98] transition-transform"
+              >
+                Apply Filters
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -471,13 +615,13 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
               <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Try adjusting your filters</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200/30 dark:divide-gray-700/30">
+            <div className="divide-y divide-gray-200/30 dark:divide-gray-700/30 -mx-3 md:mx-0">
               {filteredTransactions.map((transaction) => (
                 <div
                   key={`${transaction.source_table}-${transaction.id}`}
-                  className="group/row hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all p-4"
+                  className="group/row active:bg-gray-100 dark:active:bg-gray-700/60 md:hover:bg-white/40 md:dark:hover:bg-gray-700/40 transition-colors px-4 py-3 md:p-4"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 md:gap-4">
                     {/* Type Indicator */}
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                       transaction.type === 'income'
@@ -493,11 +637,11 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
 
                     {/* Details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-gray-900 dark:text-white truncate">
                           {transaction.description}
                         </p>
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full hidden md:inline-flex ${
                           transaction.type === 'income'
                             ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                             : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
@@ -505,19 +649,19 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
                           {transaction.type === 'income' ? 'Income' : 'Expense'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-1">
+                      <div className="flex items-center gap-2 md:gap-3 mt-1 flex-wrap">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                           {transaction.category}
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                           <Calendar size={12} />
-                          {format(new Date(transaction.date), 'MMM dd, yyyy')}
+                          {format(new Date(transaction.date), 'MMM dd')}
                         </span>
                       </div>
                     </div>
 
                     {/* Amount */}
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className={`font-bold ${
                         transaction.type === 'income'
                           ? 'text-green-600 dark:text-green-400'
@@ -527,14 +671,14 @@ export default function AllTransactions({ onNavigate }: AllTransactionsProps) {
                       </p>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                    {/* Actions - Always visible on mobile, hover on desktop */}
+                    <div className="flex items-center gap-1 md:opacity-0 md:group-hover/row:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleDelete(transaction)}
-                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all"
+                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-red-500/10 active:bg-red-500/30 md:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors active:scale-95"
                         title="Delete"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </div>

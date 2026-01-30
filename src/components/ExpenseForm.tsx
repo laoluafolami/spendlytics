@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { EXPENSE_CATEGORIES, PAYMENT_METHODS, RECURRENCE_FREQUENCIES, COMMON_TAGS, ExpenseFormData } from '../types/expense'
+import { PAYMENT_METHODS, RECURRENCE_FREQUENCIES, COMMON_TAGS, ExpenseFormData } from '../types/expense'
+import { getAllExpenseCategories } from '../utils/categoryUtils'
 import { Save, X, Plus, CreditCard, ArrowRight } from 'lucide-react'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
@@ -33,9 +34,22 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
   )
   const [loading, setLoading] = useState(false)
   const [customTag, setCustomTag] = useState('')
+  // Dynamic expense categories (base + custom from localStorage)
+  const [expenseCategories, setExpenseCategories] = useState<string[]>([])
   // Integration: Available liabilities for debt payment linking
   const [availableLiabilities, setAvailableLiabilities] = useState<Liability[]>([])
   const [integrationMessage, setIntegrationMessage] = useState<string | null>(null)
+
+  // Load categories on mount and when initialData changes
+  useEffect(() => {
+    const allCategories = getAllExpenseCategories()
+    // Ensure the current category is included even if it's a custom category not yet in the list
+    if (initialData?.category && !allCategories.includes(initialData.category)) {
+      setExpenseCategories([...allCategories, initialData.category])
+    } else {
+      setExpenseCategories(allCategories)
+    }
+  }, [initialData])
 
   // Load liabilities when component mounts or when category changes to Debt Payment
   useEffect(() => {
@@ -171,7 +185,7 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
               className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
             >
               <option value="">Select a category</option>
-              {EXPENSE_CATEGORIES.map((cat) => (
+              {expenseCategories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>

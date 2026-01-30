@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Trash2, Edit2, Inbox, Search, Filter, X, CreditCard, Repeat, Receipt, Save, Bookmark, Calendar } from 'lucide-react'
-import { Expense, EXPENSE_CATEGORIES } from '../types/expense'
+import { Expense } from '../types/expense'
+import { getAllExpenseCategories } from '../utils/categoryUtils'
 import { format } from 'date-fns'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
@@ -57,6 +58,38 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
   const [filterPresets, setFilterPresets] = useState<FilterPreset[]>([])
   const [showSavePreset, setShowSavePreset] = useState(false)
   const [presetName, setPresetName] = useState('')
+
+  // Mobile detection for bottom sheet filters
+  const [isMobile, setIsMobile] = useState(false)
+  const filterSheetRef = useRef<HTMLDivElement>(null)
+
+  // Dynamic categories (base + custom from localStorage)
+  const [expenseCategories, setExpenseCategories] = useState<string[]>([])
+
+  useEffect(() => {
+    setExpenseCategories(getAllExpenseCategories())
+  }, [])
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Lock body scroll when mobile filter sheet is open
+  useEffect(() => {
+    if (showFilters && isMobile) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showFilters, isMobile])
 
   useEffect(() => {
     if (safeSettings.feature_saved_filters) {
@@ -299,15 +332,16 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
               </div>
             )}
 
-            {showFilters && (
+            {/* Desktop Filters - Inline */}
+            {showFilters && !isMobile && (
               <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                  className="px-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
                 >
                   <option value="">All Categories</option>
-                  {EXPENSE_CATEGORIES.map((cat) => (
+                  {expenseCategories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
@@ -316,7 +350,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                   <select
                     value={selectedPaymentMethod}
                     onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                    className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                    className="px-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
                   >
                     <option value="">All Payment Methods</option>
                     <option value="Cash">Cash</option>
@@ -328,7 +362,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                 )}
 
                 {safeSettings.feature_recurring && (
-                  <label className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer">
+                  <label className="flex items-center gap-2 px-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer">
                     <input
                       type="checkbox"
                       checked={showRecurringOnly}
@@ -346,14 +380,14 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
                       placeholder="Date from"
-                      className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
+                      className="px-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
                     />
                     <input
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
                       placeholder="Date to"
-                      className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
+                      className="px-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
                     />
                   </>
                 )}
@@ -366,7 +400,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                       value={amountFrom}
                       onChange={(e) => setAmountFrom(e.target.value)}
                       placeholder="Amount from"
-                      className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
+                      className="px-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
                     />
                     <input
                       type="number"
@@ -374,10 +408,137 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                       value={amountTo}
                       onChange={(e) => setAmountTo(e.target.value)}
                       placeholder="Amount to"
-                      className="px-4 py-2 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
+                      className="px-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
                     />
                   </>
                 )}
+              </div>
+            )}
+
+            {/* Mobile Filter Bottom Sheet */}
+            {showFilters && isMobile && (
+              <div
+                ref={filterSheetRef}
+                className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-fade-in"
+                onClick={(e) => {
+                  if (e.target === filterSheetRef.current) {
+                    setShowFilters(false)
+                  }
+                }}
+              >
+                <div className="absolute inset-x-0 bottom-0 bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[70vh] overflow-y-auto animate-slide-up safe-bottom">
+                  <div className="sticky top-0 bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h3 className="font-bold text-gray-900 dark:text-white">Filters</h3>
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl active:scale-95 transition-transform"
+                    >
+                      <X size={20} className="text-gray-500" />
+                    </button>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category</label>
+                      <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                      >
+                        <option value="">All Categories</option>
+                        {expenseCategories.map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {safeSettings.feature_payment_methods && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Method</label>
+                        <select
+                          value={selectedPaymentMethod}
+                          onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                          className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                        >
+                          <option value="">All Payment Methods</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Credit Card">Credit Card</option>
+                          <option value="Debit Card">Debit Card</option>
+                          <option value="Bank Transfer">Bank Transfer</option>
+                          <option value="Digital Wallet">Digital Wallet</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {safeSettings.feature_recurring && (
+                      <label className="flex items-center gap-3 px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={showRecurringOnly}
+                          onChange={(e) => setShowRecurringOnly(e.target.checked)}
+                          className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-base font-medium text-gray-700 dark:text-gray-300">Recurring Only</span>
+                      </label>
+                    )}
+
+                    {safeSettings.feature_date_range_filter && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">From Date</label>
+                          <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">To Date</label>
+                          <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {safeSettings.feature_amount_range_filter && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Min Amount</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={amountFrom}
+                            onChange={(e) => setAmountFrom(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Amount</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={amountTo}
+                            onChange={(e) => setAmountTo(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white text-base"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="w-full px-4 py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium active:scale-[0.98] transition-transform"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -394,10 +555,10 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
             </div>
           ) : (
             <>
-              {/* Mobile Card Layout */}
-              <div className="block md:hidden divide-y divide-gray-200/30 dark:divide-gray-700/30">
+              {/* Mobile Card Layout - Edge to Edge */}
+              <div className="block md:hidden divide-y divide-gray-200/30 dark:divide-gray-700/30 -mx-3 sm:mx-0">
                 {filteredExpenses.map((expense) => (
-                  <div key={expense.id} className="p-4 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all">
+                  <div key={expense.id} className="px-4 py-3 active:bg-gray-100 dark:active:bg-gray-700/60 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 dark:text-white truncate">
@@ -455,9 +616,9 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                       <div className="flex items-center gap-2 ml-auto">
                         <button
                           onClick={() => onEdit(expense)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-sm font-medium transition-all"
+                          className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] rounded-xl bg-blue-500/10 active:bg-blue-500/30 text-blue-600 dark:text-blue-400 text-sm font-medium transition-colors active:scale-95"
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={16} />
                           Edit
                         </button>
                         <button
@@ -466,9 +627,9 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
                               onDelete(expense.id)
                             }
                           }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium transition-all"
+                          className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] rounded-xl bg-red-500/10 active:bg-red-500/30 text-red-600 dark:text-red-400 text-sm font-medium transition-colors active:scale-95"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                           Delete
                         </button>
                       </div>

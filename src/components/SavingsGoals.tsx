@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Plus, Target, Edit2, Trash2, X, TrendingUp, Calendar, Zap, PiggyBank, Clock, Award, AlertCircle, CheckCircle2, Info, Sparkles, ArrowUpRight, Calculator, Landmark, Link, RefreshCw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useCurrency } from '../contexts/CurrencyContext'
@@ -46,6 +46,9 @@ export default function SavingsGoals() {
   })
   // Integration: Available assets for linking
   const [availableAssets, setAvailableAssets] = useState<Asset[]>([])
+
+  // Ref for scroll-into-view when form is shown
+  const formRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadGoals()
@@ -443,7 +446,15 @@ export default function SavingsGoals() {
             Calculator
           </button>
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              const wasHidden = !showForm
+              setShowForm(!showForm)
+              if (wasHidden) {
+                setTimeout(() => {
+                  formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }, 100)
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-xl font-medium transform hover:scale-105 transition-all duration-300 shadow-lg"
           >
             <Plus size={18} />
@@ -748,7 +759,7 @@ export default function SavingsGoals() {
 
       {/* Add/Edit Form */}
       {showForm && (
-        <div className="group relative">
+        <div ref={formRef} className="group relative">
           <div className="absolute inset-0 bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 rounded-3xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
           <form onSubmit={handleSubmit} className="relative p-6 rounded-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-xl">
             <div className="flex items-center justify-between mb-6">

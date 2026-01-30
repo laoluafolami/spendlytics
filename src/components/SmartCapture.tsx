@@ -18,32 +18,9 @@ import { parseReceiptVerbose } from '../utils/receiptParser'
 import { extractExpenseWithGemini, extractExpenseFromTextWithGemini, extractMultipleExpensesWithGemini, getGeminiApiKey, setGeminiApiKey, clearGeminiApiKey } from '../utils/geminiService'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types/expense'
 import { useCurrency } from '../contexts/CurrencyContext'
+import { getCustomCategories, addCustomCategory, TransactionType } from '../utils/categoryUtils'
 
 type InputMode = 'quick' | 'camera' | 'image' | 'paste' | 'voice'
-type TransactionType = 'expense' | 'income'
-
-// Custom categories storage key
-const CUSTOM_EXPENSE_CATEGORIES_KEY = 'wealthpulse_custom_expense_categories'
-const CUSTOM_INCOME_CATEGORIES_KEY = 'wealthpulse_custom_income_categories'
-
-// Helper functions for custom categories
-function getCustomCategories(type: TransactionType): string[] {
-  const key = type === 'expense' ? CUSTOM_EXPENSE_CATEGORIES_KEY : CUSTOM_INCOME_CATEGORIES_KEY
-  try {
-    const stored = localStorage.getItem(key)
-    return stored ? JSON.parse(stored) : []
-  } catch {
-    return []
-  }
-}
-
-function addCustomCategory(type: TransactionType, category: string): void {
-  const key = type === 'expense' ? CUSTOM_EXPENSE_CATEGORIES_KEY : CUSTOM_INCOME_CATEGORIES_KEY
-  const existing = getCustomCategories(type)
-  if (!existing.includes(category)) {
-    localStorage.setItem(key, JSON.stringify([...existing, category]))
-  }
-}
 
 interface SmartCaptureProps {
   onExpenseAdd: (data: {

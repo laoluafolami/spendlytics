@@ -192,6 +192,32 @@
   .swipe-hint {
     @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-gray-300/50 dark:bg-gray-600/50 rounded-r-full;
   }
+
+  /* Edge-to-edge cards on mobile */
+  .card-edge-mobile {
+    @apply -mx-3 sm:mx-0 rounded-none sm:rounded-2xl;
+  }
+
+  /* Native list item with touch feedback */
+  .list-item-native {
+    @apply px-4 py-3 active:bg-gray-100 dark:active:bg-gray-700/40 transition-colors;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Bottom sheet overlay backdrop */
+  .bottom-sheet-overlay {
+    @apply fixed inset-0 z-50 bg-black/40 backdrop-blur-sm;
+  }
+
+  /* Mobile touch target (44x44 minimum) */
+  .touch-target {
+    @apply min-w-[44px] min-h-[44px];
+  }
+
+  /* Mobile touch target large (48x48) */
+  .touch-target-lg {
+    @apply min-w-[48px] min-h-[48px];
+  }
 }
 
 /* ===== UTILITIES LAYER ===== */
