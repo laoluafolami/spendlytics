@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Trash2, Edit2, Inbox, Search, Filter, X, CreditCard, Repeat, Receipt, Save, Bookmark, Calendar, Plus } from 'lucide-react'
 import { Expense } from '../types/expense'
-import { getAllExpenseCategories } from '../utils/categoryUtils'
+import { getAllExpenseCategories, syncCategoriesFromDB } from '../utils/categoryUtils'
 import { format } from 'date-fns'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
@@ -64,12 +64,18 @@ export default function ExpenseList({ expenses, onDelete, onEdit, onAdd }: Expen
   const [isMobile, setIsMobile] = useState(false)
   const filterSheetRef = useRef<HTMLDivElement>(null)
 
-  // Dynamic categories (base + custom from localStorage)
+  // Dynamic categories (base + custom from localStorage + from DB)
   const [expenseCategories, setExpenseCategories] = useState<string[]>([])
 
+  // Sync categories from actual expense data to localStorage, then load all
   useEffect(() => {
-    setExpenseCategories(getAllExpenseCategories())
-  }, [])
+    // Get unique categories from the expenses prop (DB data)
+    const dbCategories = [...new Set(expenses.map(e => e.category).filter(Boolean))]
+    // Sync any new categories from DB to localStorage
+    syncCategoriesFromDB('expense', dbCategories)
+    // Load all categories (base + localStorage + DB)
+    setExpenseCategories(getAllExpenseCategories(dbCategories))
+  }, [expenses])
 
   useEffect(() => {
     const checkMobile = () => {

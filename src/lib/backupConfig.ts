@@ -16,10 +16,10 @@
  * 3. Set orderBy if you want sorted results
  */
 export const SUPABASE_TABLES = {
-  // Core financial data
+  // Core financial data - uses 'expenses' table with user_id (main app tables)
   expenses: {
-    table: 'app_expenses',
-    sessionField: 'session_id',
+    table: 'expenses',
+    sessionField: 'user_id',
     orderBy: { field: 'date', ascending: false },
     description: 'All expense transactions'
   },
@@ -30,54 +30,54 @@ export const SUPABASE_TABLES = {
     description: 'All income entries'
   },
   budgets: {
-    table: 'app_budgets',
-    sessionField: 'session_id',
+    table: 'budgets',
+    sessionField: 'user_id',
     orderBy: null,
     description: 'Budget allocations by category'
   },
   savingsGoals: {
-    table: 'app_savings_goals',
-    sessionField: 'session_id',
+    table: 'savings_goals',
+    sessionField: 'user_id',
     orderBy: null,
     description: 'Savings goals and progress'
   },
 
-  // Net worth tracking
+  // Net worth tracking - uses user_id for authenticated users
   assets: {
     table: 'assets',
-    sessionField: 'session_id',
+    sessionField: 'user_id',
     orderBy: { field: 'created_at', ascending: false },
     description: 'Financial assets'
   },
   liabilities: {
     table: 'liabilities',
-    sessionField: 'session_id',
+    sessionField: 'user_id',
     orderBy: { field: 'created_at', ascending: false },
     description: 'Debts and loans'
   },
   investments: {
     table: 'investments',
-    sessionField: 'session_id',
+    sessionField: 'user_id',
     orderBy: { field: 'created_at', ascending: false },
     description: 'Investment holdings'
   },
   netWorthSnapshots: {
     table: 'net_worth_snapshots',
-    sessionField: 'session_id',
+    sessionField: 'user_id',
     orderBy: { field: 'date', ascending: false },
     description: 'Historical net worth records'
   },
 
   // App configuration
   filterPresets: {
-    table: 'app_filter_presets',
-    sessionField: 'session_id',
+    table: 'filter_presets',
+    sessionField: 'user_id',
     orderBy: null,
     description: 'Saved filter configurations'
   },
   settings: {
-    table: 'app_settings',
-    sessionField: 'session_id',
+    table: 'user_settings',
+    sessionField: 'user_id',
     orderBy: null,
     description: 'User feature settings'
   },

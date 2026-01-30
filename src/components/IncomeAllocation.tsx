@@ -95,6 +95,13 @@ const DEFAULT_CATEGORY_TO_BUCKET: Record<string, string> = {
   'travel': 'Wants',
   'vacation': 'Wants',
   'betting & gambling': 'Wants',
+  'fun and play': 'Wants', // Custom discretionary category
+  'fun & play': 'Wants',
+  'leisure': 'Wants',
+  'recreation': 'Wants',
+  'games': 'Wants',
+  'movies': 'Wants',
+  'sports': 'Wants',
 
   // Savings/Investment
   'savings': 'Long Term Savings',

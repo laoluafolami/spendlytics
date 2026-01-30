@@ -31,27 +31,62 @@ export function addCustomCategory(type: TransactionType, category: string): void
 }
 
 /**
- * Get all expense categories (base + custom)
+ * Get all expense categories (base + custom + optional existing from DB)
+ * @param existingCategories - Categories found in actual expense records (from DB)
  */
-export function getAllExpenseCategories(): string[] {
+export function getAllExpenseCategories(existingCategories: string[] = []): string[] {
   const customCategories = getCustomCategories('expense')
-  return [...EXPENSE_CATEGORIES, ...customCategories]
+  // Merge all sources and deduplicate
+  const allCategories = new Set([
+    ...EXPENSE_CATEGORIES,
+    ...customCategories,
+    ...existingCategories
+  ])
+  return Array.from(allCategories)
 }
 
 /**
- * Get all income categories (base + custom)
+ * Get all income categories (base + custom + optional existing from DB)
+ * @param existingCategories - Categories found in actual income records (from DB)
  */
-export function getAllIncomeCategories(): string[] {
+export function getAllIncomeCategories(existingCategories: string[] = []): string[] {
   const customCategories = getCustomCategories('income')
-  return [...INCOME_CATEGORIES, ...customCategories]
+  // Merge all sources and deduplicate
+  const allCategories = new Set([
+    ...INCOME_CATEGORIES,
+    ...customCategories,
+    ...existingCategories
+  ])
+  return Array.from(allCategories)
 }
 
 /**
  * Get all categories for a given transaction type
+ * @param existingCategories - Categories found in actual records (from DB)
  */
-export function getAllCategories(type: TransactionType): string[] {
+export function getAllCategories(type: TransactionType, existingCategories: string[] = []): string[] {
   if (type === 'expense') {
-    return getAllExpenseCategories()
+    return getAllExpenseCategories(existingCategories)
   }
-  return getAllIncomeCategories()
+  return getAllIncomeCategories(existingCategories)
+}
+
+/**
+ * Sync categories from DB to localStorage
+ * Call this when loading expenses to ensure custom categories include any DB-only categories
+ */
+export function syncCategoriesFromDB(type: TransactionType, dbCategories: string[]): void {
+  const baseCategories = type === 'expense'
+    ? EXPENSE_CATEGORIES as readonly string[]
+    : INCOME_CATEGORIES as readonly string[]
+
+  // Find categories that are in DB but not in base categories
+  const newCustomCategories = dbCategories.filter(
+    cat => !baseCategories.includes(cat)
+  )
+
+  // Add each new category to localStorage
+  newCustomCategories.forEach(cat => {
+    addCustomCategory(type, cat)
+  })
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { PAYMENT_METHODS, RECURRENCE_FREQUENCIES, COMMON_TAGS, ExpenseFormData } from '../types/expense'
-import { getAllExpenseCategories, addCustomCategory } from '../utils/categoryUtils'
+import { getAllExpenseCategories, addCustomCategory, syncCategoriesFromDB } from '../utils/categoryUtils'
 import { Save, X, Plus, CreditCard, ArrowRight } from 'lucide-react'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
@@ -43,30 +43,15 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
   const [availableLiabilities, setAvailableLiabilities] = useState<Liability[]>([])
   const [integrationMessage, setIntegrationMessage] = useState<string | null>(null)
 
-  // Load categories on mount
+  // Load and sync categories on mount and when initialData changes
   useEffect(() => {
-    const loadCategories = () => {
-      const allCategories = getAllExpenseCategories()
-      // Ensure the current category is included even if it's a custom category not yet in the list
-      if (initialData?.category && !allCategories.includes(initialData.category)) {
-        setExpenseCategories([...allCategories, initialData.category])
-      } else {
-        setExpenseCategories(allCategories)
-      }
+    // If editing an expense, sync its category to localStorage (in case it came from DB/import)
+    if (initialData?.category) {
+      syncCategoriesFromDB('expense', [initialData.category])
     }
-    loadCategories()
-  }, []) // Load once on mount
-
-  // Reload categories when initialData changes (e.g., when editing different expenses)
-  useEffect(() => {
-    if (initialData) {
-      const allCategories = getAllExpenseCategories()
-      if (initialData.category && !allCategories.includes(initialData.category)) {
-        setExpenseCategories([...allCategories, initialData.category])
-      } else {
-        setExpenseCategories(allCategories)
-      }
-    }
+    // Load all categories (now includes any synced category)
+    const allCategories = getAllExpenseCategories()
+    setExpenseCategories(allCategories)
   }, [initialData])
 
   // Load liabilities when component mounts or when category changes to Debt Payment

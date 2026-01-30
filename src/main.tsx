@@ -216,42 +216,42 @@ const registerServiceWorker = async () => {
 
 // Update changelog - edit this when releasing new versions
 const UPDATE_CHANGELOG = {
-  version: '5.16',
-  title: 'Complete Backup & Bug Fixes',
+  version: '5.17',
+  title: 'Unified Data & Backup Fix',
   // Short highlights for update notification
   highlights: [
-    { icon: '💾', text: 'Backup now shows ALL data with clear counts' },
-    { icon: '🗂️', text: 'Custom categories now appear when editing' },
-    { icon: '📊', text: 'Income allocation maps all expense categories' },
-    { icon: '✨', text: 'Intuitive backup UI with visual insights' },
+    { icon: '💾', text: 'Backup now correctly detects ALL your data' },
+    { icon: '🗂️', text: 'Categories unified from DB + localStorage' },
+    { icon: '📊', text: 'Fun and Play + more categories now tracked' },
+    { icon: '🔄', text: 'Categories auto-sync across all screens' },
   ],
   // Detailed tips for post-update welcome screen
   tips: [
     {
       icon: '💾',
-      title: 'Complete Data Backup',
-      description: 'Backup & Restore now shows exactly how many records you have across expenses, income, budgets, goals, assets, investments, and settings.',
+      title: 'Backup Fixed',
+      description: 'Backup now correctly reads from your main expenses table - all your expenses, income, and data will show up properly.',
       color: '#3b82f6',
       colorEnd: '#8b5cf6'
     },
     {
       icon: '🗂️',
-      title: 'Custom Categories Fixed',
-      description: 'Custom categories you create now properly appear when editing existing expenses - no more missing categories!',
+      title: 'Unified Categories',
+      description: 'Categories are now synced from your actual expense data. If you have "Fun and Play" in your expenses, it will appear in dropdowns.',
       color: '#10b981',
       colorEnd: '#22d3ee'
     },
     {
       icon: '📊',
-      title: 'Better Budget Tracking',
-      description: 'Income allocation now correctly maps Car Repairs, House Repairs, Recharge Card, and Debt Payment to the right buckets.',
+      title: 'Better Budget Mapping',
+      description: 'Income allocation now maps Fun and Play, Leisure, Recreation, Movies, Sports, and Games to the Wants bucket.',
       color: '#f59e0b',
       colorEnd: '#ef4444'
     },
     {
-      icon: '✨',
-      title: 'Visual Backup Insights',
-      description: 'See color-coded cards for each data category with individual counts, plus a hero total showing all your protected records.',
+      icon: '🔄',
+      title: 'Auto Category Sync',
+      description: 'New categories from your data are automatically saved to your preferences, so they appear everywhere in the app.',
       color: '#22d3ee',
       colorEnd: '#3b82f6'
     }
