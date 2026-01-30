@@ -237,7 +237,7 @@ export default function ExpenseList({ expenses, onDelete, onEdit, onAdd }: Expen
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in max-w-full overflow-hidden">
       {/* Header with Add Button (Desktop) */}
       <div className="flex items-center justify-between">
         <div>

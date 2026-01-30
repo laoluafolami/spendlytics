@@ -216,42 +216,42 @@ const registerServiceWorker = async () => {
 
 // Update changelog - edit this when releasing new versions
 const UPDATE_CHANGELOG = {
-  version: '5.17',
-  title: 'Unified Data & Backup Fix',
+  version: '5.18',
+  title: 'Mobile Layout & Backup Complete',
   // Short highlights for update notification
   highlights: [
-    { icon: '💾', text: 'Backup now correctly detects ALL your data' },
-    { icon: '🗂️', text: 'Categories unified from DB + localStorage' },
-    { icon: '📊', text: 'Fun and Play + more categories now tracked' },
-    { icon: '🔄', text: 'Categories auto-sync across all screens' },
+    { icon: '📱', text: 'Fixed mobile overflow on Expenses & Transactions' },
+    { icon: '💾', text: 'Backup now detects budgets, goals, & settings' },
+    { icon: '🗂️', text: 'All data categories properly backed up' },
+    { icon: '✨', text: 'Cleaner mobile experience throughout' },
   ],
   // Detailed tips for post-update welcome screen
   tips: [
     {
-      icon: '💾',
-      title: 'Backup Fixed',
-      description: 'Backup now correctly reads from your main expenses table - all your expenses, income, and data will show up properly.',
+      icon: '📱',
+      title: 'Mobile Layout Fixed',
+      description: 'Expenses and All Transactions pages no longer spill horizontally on mobile - content stays within screen bounds.',
       color: '#3b82f6',
       colorEnd: '#8b5cf6'
     },
     {
-      icon: '🗂️',
-      title: 'Unified Categories',
-      description: 'Categories are now synced from your actual expense data. If you have "Fun and Play" in your expenses, it will appear in dropdowns.',
+      icon: '💾',
+      title: 'Complete Backup',
+      description: 'Backup now correctly detects all your data: expenses, income, budgets, savings goals, assets, liabilities, investments, and settings.',
       color: '#10b981',
       colorEnd: '#22d3ee'
     },
     {
-      icon: '📊',
-      title: 'Better Budget Mapping',
-      description: 'Income allocation now maps Fun and Play, Leisure, Recreation, Movies, Sports, and Games to the Wants bucket.',
+      icon: '🗂️',
+      title: 'Correct Table Names',
+      description: 'Fixed backup config to use app_budgets, app_savings_goals, app_filter_presets, and app_settings tables.',
       color: '#f59e0b',
       colorEnd: '#ef4444'
     },
     {
-      icon: '🔄',
-      title: 'Auto Category Sync',
-      description: 'New categories from your data are automatically saved to your preferences, so they appear everywhere in the app.',
+      icon: '✨',
+      title: 'Better User Experience',
+      description: 'All containers now respect viewport width on mobile for a true native app feel.',
       color: '#22d3ee',
       colorEnd: '#3b82f6'
     }
