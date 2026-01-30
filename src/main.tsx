@@ -216,42 +216,42 @@ const registerServiceWorker = async () => {
 
 // Update changelog - edit this when releasing new versions
 const UPDATE_CHANGELOG = {
-  version: '5.14',
-  title: 'Manual Entry & Mobile Redesign',
+  version: '5.15',
+  title: 'Add Custom Categories',
   // Short highlights for update notification
   highlights: [
+    { icon: '➕', text: 'Add new categories in Manual Entry & Edit modes' },
     { icon: '✍️', text: 'Manual Entry option when adding expenses' },
-    { icon: '📱', text: 'Redesigned Expenses & Transactions for mobile' },
+    { icon: '📱', text: 'Mobile-first design throughout the app' },
     { icon: '🔄', text: 'Seamless updates - no manual refresh needed' },
-    { icon: '🔧', text: 'Fixed: Custom categories in edit mode' },
   ],
   // Detailed tips for post-update welcome screen
   tips: [
     {
+      icon: '➕',
+      title: 'Add Custom Categories',
+      description: 'When adding or editing expenses, tap the + button next to Category to create a new one on the fly.',
+      color: '#3b82f6',
+      colorEnd: '#8b5cf6'
+    },
+    {
       icon: '✍️',
       title: 'Add Expense Choice',
       description: 'Tap Add Expense to choose between Smart Capture (AI receipt scanning) or Manual Entry (traditional form).',
-      color: '#3b82f6',
-      colorEnd: '#8b5cf6'
+      color: '#10b981',
+      colorEnd: '#22d3ee'
     },
     {
       icon: '📱',
       title: 'Mobile-First Design',
       description: 'Expenses and Transactions pages now have full-width cards on mobile for a true native app feel.',
-      color: '#10b981',
-      colorEnd: '#22d3ee'
+      color: '#f59e0b',
+      colorEnd: '#ef4444'
     },
     {
       icon: '🔄',
       title: 'Seamless Updates',
       description: 'App updates now apply automatically! No more uninstalling or clearing cache to see new features.',
-      color: '#f59e0b',
-      colorEnd: '#ef4444'
-    },
-    {
-      icon: '🔧',
-      title: 'Categories Fixed',
-      description: 'Custom categories you create now properly appear when editing expenses. No more missing categories!',
       color: '#22d3ee',
       colorEnd: '#3b82f6'
     }

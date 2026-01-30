@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { PAYMENT_METHODS, RECURRENCE_FREQUENCIES, COMMON_TAGS, ExpenseFormData } from '../types/expense'
-import { getAllExpenseCategories } from '../utils/categoryUtils'
+import { getAllExpenseCategories, addCustomCategory } from '../utils/categoryUtils'
 import { Save, X, Plus, CreditCard, ArrowRight } from 'lucide-react'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
@@ -36,6 +36,9 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
   const [customTag, setCustomTag] = useState('')
   // Dynamic expense categories (base + custom from localStorage)
   const [expenseCategories, setExpenseCategories] = useState<string[]>([])
+  // New category input state
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
   // Integration: Available liabilities for debt payment linking
   const [availableLiabilities, setAvailableLiabilities] = useState<Liability[]>([])
   const [integrationMessage, setIntegrationMessage] = useState<string | null>(null)
@@ -131,6 +134,22 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
     }
   }
 
+  // Handle adding a new category
+  const handleAddNewCategory = () => {
+    const trimmedName = newCategoryName.trim()
+    if (trimmedName && !expenseCategories.includes(trimmedName)) {
+      // Save to localStorage for persistence
+      addCustomCategory('expense', trimmedName)
+      // Update local state
+      setExpenseCategories([...expenseCategories, trimmedName])
+      // Select the new category
+      setFormData({ ...formData, category: trimmedName })
+      // Reset input
+      setNewCategoryName('')
+      setShowNewCategoryInput(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Integration success message */}
@@ -177,20 +196,62 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
             <label htmlFor="category" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Category
             </label>
-            <select
-              id="category"
-              required
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
-            >
-              <option value="">Select a category</option>
-              {expenseCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                id="category"
+                required
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="flex-1 px-4 py-3 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+              >
+                <option value="">Select a category</option>
+                {expenseCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowNewCategoryInput(!showNewCategoryInput)}
+                className="px-3 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl transition-all flex items-center justify-center"
+                title="Add new category"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+            {/* New Category Input */}
+            {showNewCategoryInput && (
+              <div className="mt-3 flex gap-2 animate-fade-in">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddNewCategory())}
+                  placeholder="Enter new category name"
+                  className="flex-1 px-4 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white text-sm"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNewCategory}
+                  disabled={!newCategoryName.trim()}
+                  className="px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-medium transition-all disabled:opacity-50"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNewCategoryInput(false)
+                    setNewCategoryName('')
+                  }}
+                  className="px-3 py-2.5 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Integration: Liability selector for Debt Payment category */}
