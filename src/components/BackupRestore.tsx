@@ -1,6 +1,7 @@
 /**
  * Backup & Restore Component
  * Comprehensive UI for data backup and restoration
+ * Shows ALL app data with clear counts and intuitive insights
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -25,7 +26,14 @@ import {
   TrendingUp,
   PiggyBank,
   Building2,
-  Settings
+  Settings,
+  CreditCard,
+  LineChart,
+  Target,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  BarChart3
 } from 'lucide-react';
 import {
   downloadBackup,
@@ -46,6 +54,21 @@ interface BackupRestoreProps {
 
 type Step = 'main' | 'backup' | 'restore' | 'preview' | 'restoring' | 'complete';
 
+interface ExtendedSummary {
+  expenses: number;
+  income: number;
+  budgets: number;
+  savingsGoals: number;
+  assets: number;
+  liabilities: number;
+  investments: number;
+  lastBackup: string | null;
+  totalItems: number;
+  netWorthSnapshots?: number;
+  filterPresets?: number;
+  settings?: number;
+}
+
 export default function BackupRestore({ onClose, standalone = false }: BackupRestoreProps) {
   const [step, setStep] = useState<Step>('main');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,8 +83,9 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
     encrypt: false,
     encryptionKey: ''
   });
-  const [summary, setSummary] = useState<Awaited<ReturnType<typeof getBackupSummary>> | null>(null);
+  const [summary, setSummary] = useState<ExtendedSummary | null>(null);
   const [backupRecommended, setBackupRecommended] = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(true);
 
   // Restore state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -84,13 +108,19 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
   }, []);
 
   const loadSummary = async () => {
+    setLoadingSummary(true);
     try {
       const data = await getBackupSummary();
-      setSummary(data);
+      const totalItems = data.expenses + data.income + data.budgets +
+                        data.savingsGoals + data.assets + data.liabilities +
+                        data.investments;
+      setSummary({ ...data, totalItems });
       const recommended = await isBackupRecommended();
       setBackupRecommended(recommended);
     } catch (err) {
       console.error('Failed to load backup summary:', err);
+    } finally {
+      setLoadingSummary(false);
     }
   };
 
@@ -172,6 +202,17 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
     }
   };
 
+  // Data category config for rendering
+  const dataCategories = [
+    { key: 'expenses', label: 'Expenses', icon: Wallet, color: 'from-red-500 to-rose-500', bgColor: 'bg-red-500/10', textColor: 'text-red-600 dark:text-red-400' },
+    { key: 'income', label: 'Income', icon: TrendingUp, color: 'from-green-500 to-emerald-500', bgColor: 'bg-green-500/10', textColor: 'text-green-600 dark:text-green-400' },
+    { key: 'budgets', label: 'Budgets', icon: Target, color: 'from-blue-500 to-cyan-500', bgColor: 'bg-blue-500/10', textColor: 'text-blue-600 dark:text-blue-400' },
+    { key: 'savingsGoals', label: 'Savings Goals', icon: PiggyBank, color: 'from-purple-500 to-violet-500', bgColor: 'bg-purple-500/10', textColor: 'text-purple-600 dark:text-purple-400' },
+    { key: 'assets', label: 'Assets', icon: Building2, color: 'from-amber-500 to-orange-500', bgColor: 'bg-amber-500/10', textColor: 'text-amber-600 dark:text-amber-400' },
+    { key: 'liabilities', label: 'Liabilities', icon: CreditCard, color: 'from-pink-500 to-rose-500', bgColor: 'bg-pink-500/10', textColor: 'text-pink-600 dark:text-pink-400' },
+    { key: 'investments', label: 'Investments', icon: LineChart, color: 'from-cyan-500 to-teal-500', bgColor: 'bg-cyan-500/10', textColor: 'text-cyan-600 dark:text-cyan-400' },
+  ];
+
   const containerClass = standalone
     ? 'min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 sm:p-6'
     : '';
@@ -184,15 +225,15 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
     <div className={containerClass}>
       <div className={cardClass}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-6 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
                 <Shield className="w-6 h-6" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">Backup & Restore</h2>
-                <p className="text-sm text-white/80">Keep your data safe forever</p>
+                <p className="text-sm text-white/80">Protect all your financial data</p>
               </div>
             </div>
             {onClose && (
@@ -211,54 +252,121 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
           {/* Main Menu */}
           {step === 'main' && (
             <div className="space-y-6">
-              {/* Backup Recommendation Alert */}
-              {backupRecommended && (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-amber-800 dark:text-amber-200">
-                      Backup Recommended
-                    </p>
-                    <p className="text-sm text-amber-700 dark:text-amber-300">
-                      {summary?.lastBackup
-                        ? `Your last backup was on ${summary.lastBackup}. Consider backing up again.`
-                        : "You haven't created a backup yet. Protect your data now!"}
-                    </p>
+              {/* Status Banner */}
+              {backupRecommended ? (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-amber-100 dark:bg-amber-800 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-amber-800 dark:text-amber-200">
+                        Backup Recommended
+                      </p>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                        {summary?.lastBackup
+                          ? `Last backup: ${summary.lastBackup}. It's been a while!`
+                          : "You haven't created a backup yet. Protect your data now!"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : summary?.lastBackup && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700 rounded-2xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-green-800 dark:text-green-200">
+                        Data Protected
+                      </p>
+                      <p className="text-sm text-green-700 dark:text-green-300">
+                        Last backup: {summary.lastBackup}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Data Summary */}
+              {/* Total Data Count - Hero Card */}
+              {loadingSummary ? (
+                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+                  <div className="flex items-center justify-center gap-3">
+                    <RefreshCw className="w-6 h-6 animate-spin" />
+                    <span>Loading your data...</span>
+                  </div>
+                </div>
+              ) : summary && (
+                <div className="bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl p-6 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Database className="w-5 h-5" />
+                        <span className="font-medium">Total Data to Backup</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm bg-white/20 px-3 py-1 rounded-full">
+                        <Clock className="w-4 h-4" />
+                        <span>{summary.lastBackup || 'Never backed up'}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-center py-4">
+                      <div className="text-6xl font-bold mb-2">{summary.totalItems}</div>
+                      <div className="text-white/80">Total Records</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Data Categories Grid */}
               {summary && (
-                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                  <h3 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                    <Database className="w-4 h-4" />
-                    Your Data Summary
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-500" />
+                    Data Breakdown
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-blue-500" />
-                      <span className="text-gray-600 dark:text-gray-300">
-                        {summary.expenses} expenses
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-green-500" />
-                      <span className="text-gray-600 dark:text-gray-300">
-                        {summary.income} income
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <PiggyBank className="w-4 h-4 text-purple-500" />
-                      <span className="text-gray-600 dark:text-gray-300">
-                        {summary.savingsGoals} goals
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-amber-500" />
-                      <span className="text-gray-600 dark:text-gray-300">
-                        {summary.assets} assets
-                      </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {dataCategories.map(({ key, label, icon: Icon, bgColor, textColor }) => {
+                      const count = summary[key as keyof ExtendedSummary] as number || 0;
+                      return (
+                        <div
+                          key={key}
+                          className={`${bgColor} rounded-xl p-4 transition-all hover:scale-[1.02]`}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <Icon className={`w-5 h-5 ${textColor}`} />
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
+                              {label}
+                            </span>
+                          </div>
+                          <div className={`text-2xl font-bold ${textColor}`}>
+                            {count}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {count === 0 ? 'No data' : count === 1 ? '1 record' : `${count} records`}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Settings/Preferences Card */}
+                    <div className="bg-gray-500/10 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                          Settings
+                        </span>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+                        <Check className="w-6 h-6" />
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        All preferences
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -268,53 +376,70 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
               <div className="grid sm:grid-cols-2 gap-4">
                 <button
                   onClick={() => setStep('backup')}
-                  className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all"
+                  className="group flex items-center gap-4 p-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                    <Download className="w-6 h-6" />
+                  <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Download className="w-7 h-7" />
                   </div>
                   <div className="text-left">
-                    <p className="font-semibold">Create Backup</p>
-                    <p className="text-sm text-white/80">Download your data file</p>
+                    <p className="font-bold text-lg">Create Backup</p>
+                    <p className="text-sm text-white/80">Download all {summary?.totalItems || 0} records</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setStep('restore')}
-                  className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all"
+                  className="group flex items-center gap-4 p-5 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl hover:from-purple-600 hover:to-purple-700 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                    <Upload className="w-6 h-6" />
+                  <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Upload className="w-7 h-7" />
                   </div>
                   <div className="text-left">
-                    <p className="font-semibold">Restore Backup</p>
+                    <p className="font-bold text-lg">Restore Backup</p>
                     <p className="text-sm text-white/80">Upload a backup file</p>
                   </div>
                 </button>
               </div>
 
-              {/* Info Cards */}
-              <div className="grid sm:grid-cols-3 gap-4 text-sm">
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
-                  <HardDrive className="w-5 h-5 text-blue-500 mb-2" />
-                  <p className="font-medium text-gray-900 dark:text-white">Local Storage</p>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Backup saved to your device
-                  </p>
-                </div>
-                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4">
-                  <Cloud className="w-5 h-5 text-purple-500 mb-2" />
-                  <p className="font-medium text-gray-900 dark:text-white">Cloud Sync</p>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Data synced to Supabase
-                  </p>
-                </div>
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4">
-                  <ShieldCheck className="w-5 h-5 text-green-500 mb-2" />
-                  <p className="font-medium text-gray-900 dark:text-white">Encryption</p>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Optional password protection
-                  </p>
+              {/* What Gets Backed Up */}
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-2xl p-5">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-green-500" />
+                  Everything Gets Backed Up
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>All expenses & income records</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>Budgets & savings goals</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>Assets, liabilities & net worth</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>Investment portfolio</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>Custom categories & tags</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>All app settings & preferences</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>Filter presets</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>Allocation buckets & mappings</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -331,37 +456,80 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
               </button>
 
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Create Backup
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Create Complete Backup
                 </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  Download all {summary?.totalItems || 0} records in a single file
+                </p>
+
+                {/* Data Summary */}
+                {summary && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Database className="w-5 h-5 text-blue-500" />
+                      <span className="font-medium text-blue-800 dark:text-blue-200">
+                        Data to backup:
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 text-sm">
+                      {dataCategories.map(({ key, label, icon: Icon, textColor }) => {
+                        const count = summary[key as keyof ExtendedSummary] as number || 0;
+                        if (count === 0) return null;
+                        return (
+                          <div key={key} className="flex items-center gap-2">
+                            <Icon className={`w-4 h-4 ${textColor}`} />
+                            <span className="text-gray-700 dark:text-gray-300">
+                              <strong>{count}</strong> {label.toLowerCase()}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* What's included */}
                 <div className="space-y-3 mb-6">
-                  <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl cursor-pointer">
+                  <label className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <input
                       type="checkbox"
                       checked={backupOptions.includeSupabase}
                       onChange={(e) => setBackupOptions({ ...backupOptions, includeSupabase: e.target.checked })}
-                      className="w-4 h-4 rounded text-blue-500"
+                      className="w-5 h-5 rounded text-blue-500"
                     />
-                    <Cloud className="w-5 h-5 text-blue-500" />
+                    <Cloud className="w-6 h-6 text-blue-500" />
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white">Cloud Data</p>
-                      <p className="text-sm text-gray-500">Expenses, income, budgets, assets, investments</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">Cloud Data</p>
+                      <p className="text-sm text-gray-500">Expenses, income, budgets, assets, liabilities, investments, goals</p>
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl cursor-pointer">
+                  <label className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <input
                       type="checkbox"
                       checked={backupOptions.includeLocalStorage}
                       onChange={(e) => setBackupOptions({ ...backupOptions, includeLocalStorage: e.target.checked })}
-                      className="w-4 h-4 rounded text-blue-500"
+                      className="w-5 h-5 rounded text-blue-500"
                     />
-                    <Settings className="w-5 h-5 text-purple-500" />
+                    <Settings className="w-6 h-6 text-purple-500" />
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white">Preferences</p>
-                      <p className="text-sm text-gray-500">Theme, currency, settings, API keys</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">Preferences & Settings</p>
+                      <p className="text-sm text-gray-500">Theme, currency, categories, allocation buckets, API keys</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={backupOptions.includeIndexedDB}
+                      onChange={(e) => setBackupOptions({ ...backupOptions, includeIndexedDB: e.target.checked })}
+                      className="w-5 h-5 rounded text-blue-500"
+                    />
+                    <HardDrive className="w-6 h-6 text-green-500" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 dark:text-white">Offline Data</p>
+                      <p className="text-sm text-gray-500">Cached data for offline access</p>
                     </div>
                   </label>
                 </div>
@@ -373,7 +541,7 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
                       type="checkbox"
                       checked={backupOptions.encrypt}
                       onChange={(e) => setBackupOptions({ ...backupOptions, encrypt: e.target.checked })}
-                      className="w-4 h-4 rounded text-blue-500"
+                      className="w-5 h-5 rounded text-blue-500"
                     />
                     <Lock className="w-5 h-5 text-green-500" />
                     <span className="font-medium text-gray-900 dark:text-white">
@@ -405,9 +573,9 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
                       <span className="text-sm text-gray-600 dark:text-gray-300">{progress.status}</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">{progress.percent}%</span>
                     </div>
-                    <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+                        className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300 rounded-full"
                         style={{ width: `${progress.percent}%` }}
                       />
                     </div>
@@ -418,7 +586,7 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
                 <button
                   onClick={handleBackup}
                   disabled={isLoading || (backupOptions.encrypt && !backupOptions.encryptionKey)}
-                  className="mt-6 w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="mt-6 w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 hover:from-blue-600 hover:to-purple-700 transition-all active:scale-[0.98]"
                 >
                   {isLoading ? (
                     <>
@@ -428,7 +596,7 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
                   ) : (
                     <>
                       <Download className="w-5 h-5" />
-                      Download Backup
+                      Download Backup ({summary?.totalItems || 0} records)
                     </>
                   )}
                 </button>
@@ -454,7 +622,7 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
                 {/* File Upload Area */}
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                  className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
                 >
                   <input
                     ref={fileInputRef}
@@ -463,12 +631,12 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
                     onChange={handleFileSelect}
                     className="hidden"
                   />
-                  <FileJson className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <FileJson className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="font-semibold text-gray-900 dark:text-white text-lg">
                     {selectedFile ? selectedFile.name : 'Click to select backup file'}
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Supports .json backup files
+                  <p className="text-sm text-gray-500 mt-2">
+                    Supports .json backup files from WealthPulse
                   </p>
                 </div>
 
@@ -516,76 +684,51 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
 
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <ShieldCheck className="w-5 h-5 text-green-500" />
+                  <ShieldCheck className="w-6 h-6 text-green-500" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Backup Verified
+                    Backup Verified Successfully
                   </h3>
                 </div>
 
                 {/* Backup Info */}
-                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-4">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-4 mb-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500 dark:text-gray-400">Created</p>
-                      <p className="font-medium text-gray-900 dark:text-white">
+                      <p className="font-semibold text-gray-900 dark:text-white">
                         {new Date(parsedBackup.meta.createdAt).toLocaleString()}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-500 dark:text-gray-400">Version</p>
-                      <p className="font-medium text-gray-900 dark:text-white">
+                      <p className="font-semibold text-gray-900 dark:text-white">
                         {parsedBackup.meta.version}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Data to Restore */}
-                <div className="space-y-2 mb-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Data in backup:</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {parsedBackup.meta.dataCount.expenses > 0 && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <Check className="w-4 h-4 text-green-500" />
-                        {parsedBackup.meta.dataCount.expenses} expenses
-                      </div>
-                    )}
-                    {parsedBackup.meta.dataCount.income > 0 && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <Check className="w-4 h-4 text-green-500" />
-                        {parsedBackup.meta.dataCount.income} income
-                      </div>
-                    )}
-                    {parsedBackup.meta.dataCount.budgets > 0 && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <Check className="w-4 h-4 text-green-500" />
-                        {parsedBackup.meta.dataCount.budgets} budgets
-                      </div>
-                    )}
-                    {parsedBackup.meta.dataCount.savingsGoals > 0 && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <Check className="w-4 h-4 text-green-500" />
-                        {parsedBackup.meta.dataCount.savingsGoals} savings goals
-                      </div>
-                    )}
-                    {parsedBackup.meta.dataCount.assets > 0 && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <Check className="w-4 h-4 text-green-500" />
-                        {parsedBackup.meta.dataCount.assets} assets
-                      </div>
-                    )}
-                    {parsedBackup.meta.dataCount.liabilities > 0 && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <Check className="w-4 h-4 text-green-500" />
-                        {parsedBackup.meta.dataCount.liabilities} liabilities
-                      </div>
-                    )}
-                    {parsedBackup.meta.dataCount.investments > 0 && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <Check className="w-4 h-4 text-green-500" />
-                        {parsedBackup.meta.dataCount.investments} investments
-                      </div>
-                    )}
+                {/* Data to Restore - Grid */}
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Data found in backup:
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {dataCategories.map(({ key, label, icon: Icon, bgColor, textColor }) => {
+                      const count = parsedBackup.meta.dataCount[key as keyof typeof parsedBackup.meta.dataCount] || 0;
+                      if (count === 0) return null;
+                      return (
+                        <div key={key} className={`${bgColor} rounded-xl p-3`}>
+                          <div className="flex items-center gap-2">
+                            <Icon className={`w-5 h-5 ${textColor}`} />
+                            <div>
+                              <div className={`text-lg font-bold ${textColor}`}>{count}</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-400">{label}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -617,9 +760,16 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
 
                 {/* Warning */}
                 {!restoreOptions.mergeData && (
-                  <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-xl text-sm flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span>This will replace your current data with the backup. Your existing data will be overwritten.</span>
+                  <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-800 dark:text-amber-200">
+                        This will replace your current data
+                      </p>
+                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                        Your existing data will be overwritten with the backup data.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -633,10 +783,10 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
                 <button
                   onClick={handleRestore}
                   disabled={isLoading}
-                  className="mt-6 w-full py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="mt-6 w-full py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 hover:from-purple-600 hover:to-purple-700 transition-all active:scale-[0.98]"
                 >
                   <Upload className="w-5 h-5" />
-                  Restore Backup
+                  Restore All Data
                 </button>
               </div>
             </div>
@@ -644,51 +794,60 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
 
           {/* Restoring Step */}
           {step === 'restoring' && (
-            <div className="py-8 text-center">
-              <RefreshCw className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <div className="py-12 text-center">
+              <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <RefreshCw className="w-10 h-10 text-blue-500 animate-spin" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                 Restoring Your Data
               </h3>
-              <p className="text-gray-500 mb-6">{progress.status}</p>
-              <div className="w-full max-w-xs mx-auto h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <p className="text-gray-500 mb-8">{progress.status}</p>
+              <div className="w-full max-w-md mx-auto h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300 rounded-full"
                   style={{ width: `${progress.percent}%` }}
                 />
               </div>
+              <p className="mt-3 text-sm text-gray-500">{progress.percent}% complete</p>
             </div>
           )}
 
           {/* Complete Step */}
           {step === 'complete' && (
             <div className="py-8 text-center">
-              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Check className="w-8 h-8 text-green-500" />
+              <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Check className="w-10 h-10 text-green-500" />
               </div>
 
               {restoreResult ? (
                 <>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {restoreResult.success ? 'Restore Complete!' : 'Restore Completed with Errors'}
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                    {restoreResult.success ? 'Restore Complete!' : 'Restore Completed with Issues'}
                   </h3>
 
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 text-left max-w-sm mx-auto mt-4">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Restored:</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <span>{restoreResult.restored.expenses} expenses</span>
-                      <span>{restoreResult.restored.income} income</span>
-                      <span>{restoreResult.restored.budgets} budgets</span>
-                      <span>{restoreResult.restored.savingsGoals} goals</span>
-                      <span>{restoreResult.restored.assets} assets</span>
-                      <span>{restoreResult.restored.liabilities} liabilities</span>
-                      <span>{restoreResult.restored.investments} investments</span>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-5 text-left max-w-sm mx-auto mt-6">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                      Successfully Restored:
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {Object.entries(restoreResult.restored).map(([key, value]) => {
+                        if (value === 0) return null;
+                        const category = dataCategories.find(c => c.key === key);
+                        const Icon = category?.icon || Database;
+                        return (
+                          <div key={key} className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                            <Icon className={`w-4 h-4 ${category?.textColor || 'text-gray-500'}`} />
+                            <span><strong>{value}</strong> {key}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
                   {restoreResult.errors.length > 0 && (
-                    <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-sm text-left max-w-sm mx-auto">
-                      <p className="font-medium mb-1">Errors:</p>
-                      <ul className="list-disc list-inside">
+                    <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl text-left max-w-sm mx-auto">
+                      <p className="font-medium text-red-700 dark:text-red-300 mb-2">Errors:</p>
+                      <ul className="text-sm text-red-600 dark:text-red-400 list-disc list-inside space-y-1">
                         {restoreResult.errors.map((err, i) => (
                           <li key={i}>{err}</li>
                         ))}
@@ -696,28 +855,40 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
                     </div>
                   )}
 
-                  <p className="text-sm text-gray-500 mt-4">
-                    Reloading app in a moment...
+                  <p className="text-sm text-gray-500 mt-6">
+                    Reloading app to apply changes...
                   </p>
                 </>
               ) : (
                 <>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                     Backup Created Successfully!
                   </h3>
                   <p className="text-gray-500 mb-6">
                     Your backup file has been downloaded. Keep it safe!
                   </p>
 
-                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-left max-w-sm mx-auto">
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-                      Pro Tips:
+                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-5 text-left max-w-sm mx-auto">
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-3">
+                      Storage Tips:
                     </p>
-                    <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                      <li>• Store backups in cloud storage (Google Drive, iCloud)</li>
-                      <li>• Email a copy to yourself</li>
-                      <li>• Create backups regularly</li>
-                      <li>• Keep multiple backup versions</li>
+                    <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
+                      <li className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                        Store in cloud (Google Drive, iCloud)
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                        Email a copy to yourself
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                        Create weekly backups
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                        Keep multiple versions
+                      </li>
                     </ul>
                   </div>
                 </>
@@ -731,7 +902,7 @@ export default function BackupRestore({ onClose, standalone = false }: BackupRes
                   setSelectedFile(null);
                   setError(null);
                 }}
-                className="mt-6 px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="mt-6 px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all active:scale-[0.98]"
               >
                 Done
               </button>

@@ -61,24 +61,29 @@ const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
 }
 
 // Default category to bucket mapping
+// Includes all EXPENSE_CATEGORIES from types/expense.ts plus common variations
 const DEFAULT_CATEGORY_TO_BUCKET: Record<string, string> = {
-  // Necessities
+  // Necessities - Essential living expenses
   'food & dining': 'Necessities',
   'food': 'Necessities',
   'groceries': 'Necessities',
   'transport': 'Necessities',
   'transportation': 'Necessities',
+  'car repairs': 'Necessities', // Vehicle maintenance is essential
   'utilities': 'Necessities',
   'bills': 'Necessities',
   'bills & utilities': 'Necessities',
   'rent': 'Necessities',
   'housing': 'Necessities',
+  'house repairs': 'Necessities', // Home maintenance is essential
   'healthcare': 'Necessities',
   'medical': 'Necessities',
   'insurance': 'Necessities',
   'airtime & data': 'Necessities',
+  'recharge card': 'Necessities', // Phone/data recharge
+  'bank charges': 'Necessities',
 
-  // Wants
+  // Wants - Discretionary spending
   'entertainment': 'Wants',
   'dining': 'Wants',
   'restaurants': 'Wants',
@@ -95,6 +100,7 @@ const DEFAULT_CATEGORY_TO_BUCKET: Record<string, string> = {
   'savings': 'Long Term Savings',
   'investment': 'Long Term Savings',
   'investments': 'Long Term Savings',
+  'debt payment': 'Long Term Savings', // Debt payoff is a form of savings
 
   // Education
   'education': 'Education',
@@ -110,8 +116,7 @@ const DEFAULT_CATEGORY_TO_BUCKET: Record<string, string> = {
   'gift': 'Giving',
   'contribution': 'Giving',
 
-  // Bank charges - often unavoidable
-  'bank charges': 'Necessities',
+  // Other
   'transfer out': 'Other',
   'cash withdrawal': 'Other',
   'other': 'Other',
