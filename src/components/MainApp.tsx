@@ -559,6 +559,10 @@ export default function MainApp() {
                 expenses={expenses}
                 onDelete={handleDeleteExpense}
                 onEdit={handleEditExpense}
+                onAdd={() => {
+                  setEditingExpense(null)
+                  handleNavigate('capture')
+                }}
               />
             )}
 

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Trash2, Edit2, Inbox, Search, Filter, X, CreditCard, Repeat, Receipt, Save, Bookmark, Calendar } from 'lucide-react'
+import { Trash2, Edit2, Inbox, Search, Filter, X, CreditCard, Repeat, Receipt, Save, Bookmark, Calendar, Plus } from 'lucide-react'
 import { Expense } from '../types/expense'
 import { getAllExpenseCategories } from '../utils/categoryUtils'
 import { format } from 'date-fns'
@@ -12,6 +12,7 @@ interface ExpenseListProps {
   expenses: Expense[]
   onDelete: (id: string) => void
   onEdit: (expense: Expense) => void
+  onAdd?: () => void
 }
 
 interface FilterPreset {
@@ -29,7 +30,7 @@ interface FilterPreset {
   }
 }
 
-export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListProps) {
+export default function ExpenseList({ expenses, onDelete, onEdit, onAdd }: ExpenseListProps) {
   const { formatAmount } = useCurrency()
   const { settings } = useSettings()
   const { user } = useAuth()
@@ -231,6 +232,25 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {/* Header with Add Button (Desktop) */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Expenses</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {expenses.length} total expense{expenses.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        {onAdd && (
+          <button
+            onClick={onAdd}
+            className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all shadow-lg hover:shadow-xl active:scale-95"
+          >
+            <Plus size={18} />
+            Add Expense
+          </button>
+        )}
+      </div>
+
       {safeSettings.feature_advanced_filters && (
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl blur-xl opacity-10"></div>
@@ -756,6 +776,18 @@ export default function ExpenseList({ expenses, onDelete, onEdit }: ExpenseListP
           )}
         </div>
       </div>
+
+      {/* Mobile FAB - Add Expense */}
+      {onAdd && (
+        <button
+          onClick={onAdd}
+          className="md:hidden fixed right-4 bottom-20 z-40 w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+          style={{ bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
+          aria-label="Add Expense"
+        >
+          <Plus size={24} />
+        </button>
+      )}
     </div>
   )
 }
