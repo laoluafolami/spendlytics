@@ -68,6 +68,38 @@ export const SUPABASE_TABLES = {
     description: 'Historical net worth records'
   },
 
+  // Life Goals
+  goalCategories: {
+    table: 'goal_categories',
+    sessionField: 'user_id',
+    orderBy: { field: 'sort_order', ascending: true },
+    description: 'Goal categories'
+  },
+  lifeGoals: {
+    table: 'life_goals',
+    sessionField: 'user_id',
+    orderBy: { field: 'created_at', ascending: false },
+    description: 'Life goals and targets'
+  },
+  goalMilestones: {
+    table: 'goal_milestones',
+    sessionField: 'user_id',
+    orderBy: { field: 'sort_order', ascending: true },
+    description: 'Goal milestones'
+  },
+  goalProgress: {
+    table: 'goal_progress_snapshots',
+    sessionField: 'user_id',
+    orderBy: { field: 'date', ascending: false },
+    description: 'Goal progress history'
+  },
+  driftSettings: {
+    table: 'user_drift_settings',
+    sessionField: 'user_id',
+    orderBy: null,
+    description: 'Drift detection settings'
+  },
+
   // App configuration
   filterPresets: {
     table: 'app_filter_presets',
@@ -179,7 +211,13 @@ export const LOCALSTORAGE_KEYS = {
       'spendlytics_liabilities',
       'spendlytics_investments',
       'spendlytics_net_worth_snapshots',
-      'spendlytics_networth_history'
+      'spendlytics_networth_history',
+      'spendlytics_life_goals',
+      'spendlytics_goal_categories',
+      'spendlytics_goal_milestones',
+      'spendlytics_goal_progress',
+      'spendlytics_drift_settings',
+      'spendlytics_life_goals_sync_queue'
     ],
     description: 'Cached data for offline access'
   },

@@ -27,9 +27,10 @@ import InvestmentsManager from './InvestmentsManager'
 import IncomeAllocation from './IncomeAllocation'
 import MigrationStatus from './MigrationStatus'
 import BackupRestore from './BackupRestore'
+import LifeGoals from './LifeGoals'
 import { SharedData, getSharedData, clearSharedData } from '../utils/shareService'
 
-type View = 'dashboard' | 'transactions' | 'expenses' | 'add' | 'capture' | 'bulk-import' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import' | 'assets' | 'liabilities' | 'net-worth' | 'investments' | 'allocation' | 'backup'
+type View = 'dashboard' | 'transactions' | 'expenses' | 'add' | 'capture' | 'bulk-import' | 'analytics' | 'settings' | 'income' | 'budgets' | 'savings' | 'reports' | 'import' | 'assets' | 'liabilities' | 'net-worth' | 'investments' | 'allocation' | 'backup' | 'life-goals'
 
 export default function MainApp() {
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -105,7 +106,7 @@ export default function MainApp() {
   // Check for view parameter from URL
   useEffect(() => {
     const viewParam = searchParams.get('view')
-    if (viewParam && ['backup', 'settings', 'capture', 'add', 'transactions', 'analytics', 'income', 'budgets', 'savings', 'reports', 'import', 'assets', 'liabilities', 'net-worth', 'investments', 'allocation'].includes(viewParam)) {
+    if (viewParam && ['backup', 'settings', 'capture', 'add', 'transactions', 'analytics', 'income', 'budgets', 'savings', 'reports', 'import', 'assets', 'liabilities', 'net-worth', 'investments', 'allocation', 'life-goals'].includes(viewParam)) {
       setView(viewParam as View)
       // Clear the view param from URL
       const newParams = new URLSearchParams(searchParams)
@@ -384,6 +385,7 @@ export default function MainApp() {
     { view: 'analytics' as View, icon: TrendingUp, label: 'Analytics', color: 'text-orange-500', bgGradient: 'from-orange-500/10 to-orange-600/10', section: 'insights' },
     ...(settings.feature_budgets ? [{ view: 'budgets' as View, icon: Wallet, label: 'Budgets', color: 'text-amber-500', bgGradient: 'from-amber-500/10 to-amber-600/10', section: 'planning' }] : []),
     ...(settings.feature_savings_goals ? [{ view: 'savings' as View, icon: Target, label: 'Savings Goals', color: 'text-teal-500', bgGradient: 'from-teal-500/10 to-teal-600/10', section: 'planning' }] : []),
+    { view: 'life-goals' as View, icon: Target, label: 'Life Goals', color: 'text-purple-500', bgGradient: 'from-purple-500/10 to-pink-600/10', section: 'planning' },
     ...(settings.feature_reports ? [{ view: 'reports' as View, icon: FileText, label: 'Reports', color: 'text-cyan-500', bgGradient: 'from-cyan-500/10 to-cyan-600/10', section: 'insights' }] : []),
     ...((settings.feature_import_csv || settings.feature_export_excel) ? [{ view: 'import' as View, icon: Upload, label: 'Import/Export', color: 'text-gray-500', bgGradient: 'from-gray-500/10 to-gray-600/10', section: 'tools' }] : []),
     { view: 'settings' as View, icon: SettingsIcon, label: 'Settings', color: 'text-gray-500', bgGradient: 'from-gray-500/10 to-gray-600/10', section: 'tools' },
@@ -675,6 +677,8 @@ export default function MainApp() {
             {view === 'budgets' && <BudgetManager expenses={expenses} />}
 
             {view === 'savings' && <SavingsGoals />}
+
+            {view === 'life-goals' && <LifeGoals />}
 
             {view === 'reports' && <Reports expenses={expenses} />}
 
