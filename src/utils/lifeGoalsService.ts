@@ -13,7 +13,9 @@ import {
   GoalProgressSnapshot,
   UserDriftSettings,
   DEFAULT_DRIFT_SETTINGS,
+  LinkedMetricType,
 } from '../types/lifeGoals'
+import { getAssets, getLiabilities, getInvestments } from './financeDataService'
 
 // ============================================================================
 // CONFIGURATION
@@ -653,6 +655,159 @@ export async function updateDriftSettings(updates: Partial<UserDriftSettings>): 
   }
 
   return null
+}
+
+// ============================================================================
+// AUTO-SYNC: Fetch metrics from app data
+// ============================================================================
+
+/**
+ * Fetch the current value of a linked metric from app data
+ */
+export async function getLinkedMetricValue(metric: LinkedMetricType): Promise<number> {
+  try {
+    switch (metric) {
+      case 'net_worth': {
+        const [assets, liabilities] = await Promise.all([getAssets(), getLiabilities()])
+        const totalAssets = assets.reduce((sum, a) => sum + (a.value || 0), 0)
+        const totalLiabilities = liabilities.reduce((sum, l) => sum + (l.current_balance || 0), 0)
+        return totalAssets - totalLiabilities
+      }
+
+      case 'total_assets': {
+        const assets = await getAssets()
+        return assets.reduce((sum, a) => sum + (a.value || 0), 0)
+      }
+
+      case 'total_investments': {
+        const investments = await getInvestments()
+        return investments.reduce((sum, i) => sum + (i.market_value || 0), 0)
+      }
+
+      case 'total_real_estate': {
+        const assets = await getAssets()
+        return assets
+          .filter(a => a.type === 'real_estate')
+          .reduce((sum, a) => sum + (a.value || 0), 0)
+      }
+
+      case 'passive_income': {
+        // Fetch income marked as passive (dividends, rental, royalties)
+        const userId = await getCurrentUserId()
+        if (!userId) return 0
+
+        const { data } = await supabase
+          .from('app_income')
+          .select('amount, category')
+          .eq('user_id', userId)
+          .in('category', ['Dividends', 'Rental', 'Royalties', 'Investment', 'Other Passive'])
+
+        if (!data) return 0
+
+        // Calculate monthly average from last 3 months
+        return data.reduce((sum, i) => sum + (i.amount || 0), 0) / 3
+      }
+
+      case 'total_income': {
+        const userId = await getCurrentUserId()
+        if (!userId) return 0
+
+        // Get current month's income
+        const now = new Date()
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+        const { data } = await supabase
+          .from('app_income')
+          .select('amount')
+          .eq('user_id', userId)
+          .gte('date', startOfMonth)
+
+        if (!data) return 0
+        return data.reduce((sum, i) => sum + (i.amount || 0), 0)
+      }
+
+      case 'savings_rate': {
+        const userId = await getCurrentUserId()
+        if (!userId) return 0
+
+        // Calculate from current month
+        const now = new Date()
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+        const [incomeResult, expenseResult] = await Promise.all([
+          supabase.from('app_income').select('amount').eq('user_id', userId).gte('date', startOfMonth),
+          supabase.from('expenses').select('amount').eq('user_id', userId).gte('date', startOfMonth)
+        ])
+
+        const totalIncome = (incomeResult.data || []).reduce((sum, i) => sum + (i.amount || 0), 0)
+        const totalExpenses = (expenseResult.data || []).reduce((sum, e) => sum + (e.amount || 0), 0)
+
+        if (totalIncome === 0) return 0
+        return ((totalIncome - totalExpenses) / totalIncome) * 100
+      }
+
+      case 'custom':
+      default:
+        return 0
+    }
+  } catch (error) {
+    console.error(`Error fetching metric ${metric}:`, error)
+    return 0
+  }
+}
+
+/**
+ * Sync all goals that have linked metrics - auto-update their current values
+ */
+export async function syncLinkedGoals(): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = []
+  let synced = 0
+
+  try {
+    const goals = await getLifeGoals()
+    const linkedGoals = goals.filter(g => g.linked_metric && g.is_active && g.status !== 'completed')
+
+    for (const goal of linkedGoals) {
+      try {
+        const metricValue = await getLinkedMetricValue(goal.linked_metric!)
+
+        // Apply multiplier if set
+        const adjustedValue = metricValue * (goal.linked_metric_multiplier || 1)
+
+        // Only update if value changed
+        if (Math.abs(adjustedValue - goal.current_value) > 0.01) {
+          await updateLifeGoal(goal.id, { current_value: adjustedValue })
+          synced++
+        }
+      } catch (error) {
+        errors.push(`Failed to sync goal "${goal.title}": ${error}`)
+      }
+    }
+  } catch (error) {
+    errors.push(`Failed to fetch goals: ${error}`)
+  }
+
+  return { synced, errors }
+}
+
+/**
+ * Get all metric values at once (for dashboard display)
+ */
+export async function getAllMetricValues(): Promise<Record<LinkedMetricType, number>> {
+  const metrics: LinkedMetricType[] = [
+    'net_worth', 'total_assets', 'total_investments', 'passive_income',
+    'savings_rate', 'total_income', 'total_real_estate', 'custom'
+  ]
+
+  const values: Record<string, number> = {}
+
+  await Promise.all(
+    metrics.map(async (metric) => {
+      values[metric] = await getLinkedMetricValue(metric)
+    })
+  )
+
+  return values as Record<LinkedMetricType, number>
 }
 
 // ============================================================================

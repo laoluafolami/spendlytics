@@ -19,6 +19,7 @@ import {
   getGoalMilestones,
   getDriftSettings,
   saveGoalProgress,
+  syncLinkedGoals, getLinkedMetricValue,
   calculateGoalProgress, daysUntilTarget, isGoalDrifting, formatGoalValue
 } from '../utils/lifeGoalsService'
 import type { LucideIcon } from 'lucide-react'
@@ -98,6 +99,11 @@ export default function LifeGoals() {
 
     try {
       setLoading(true)
+
+      // First sync linked goals with latest metric values
+      await syncLinkedGoals()
+
+      // Then fetch all data
       const [goalsData, categoriesData, settingsData] = await Promise.all([
         getLifeGoals(),
         getGoalCategories(),
@@ -1002,7 +1008,20 @@ export default function LifeGoals() {
                 </label>
                 <select
                   value={goalForm.linked_metric}
-                  onChange={e => setGoalForm({ ...goalForm, linked_metric: e.target.value as LinkedMetricType | '' })}
+                  onChange={async (e) => {
+                    const metric = e.target.value as LinkedMetricType | ''
+                    setGoalForm({ ...goalForm, linked_metric: metric })
+
+                    // Auto-fetch current value when a metric is selected
+                    if (metric && metric !== 'custom') {
+                      try {
+                        const value = await getLinkedMetricValue(metric)
+                        setGoalForm(prev => ({ ...prev, linked_metric: metric, current_value: value.toString() }))
+                      } catch (error) {
+                        console.error('Error fetching metric value:', error)
+                      }
+                    }
+                  }}
                   className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Manual tracking only</option>
