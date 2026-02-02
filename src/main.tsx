@@ -216,44 +216,44 @@ const registerServiceWorker = async () => {
 
 // Update changelog - edit this when releasing new versions
 const UPDATE_CHANGELOG = {
-  version: '5.18',
-  title: 'Mobile Layout & Backup Complete',
+  version: '5.19',
+  title: 'Life Goals & Budget Enforcement',
   // Short highlights for update notification
   highlights: [
-    { icon: '📱', text: 'Fixed mobile overflow on Expenses & Transactions' },
-    { icon: '💾', text: 'Backup now detects budgets, goals, & settings' },
-    { icon: '🗂️', text: 'All data categories properly backed up' },
-    { icon: '✨', text: 'Cleaner mobile experience throughout' },
+    { icon: '🎯', text: 'Life Goals with intelligent insights & projections' },
+    { icon: '🛡️', text: 'Budget alerts before you overspend' },
+    { icon: '📊', text: 'Investment strategies (Magic Formula & more)' },
+    { icon: '💡', text: 'What-if calculator for goal planning' },
   ],
   // Detailed tips for post-update welcome screen
   tips: [
     {
-      icon: '📱',
-      title: 'Mobile Layout Fixed',
-      description: 'Expenses and All Transactions pages no longer spill horizontally on mobile - content stays within screen bounds.',
-      color: '#3b82f6',
-      colorEnd: '#8b5cf6'
+      icon: '🎯',
+      title: 'Life Goals Tracking',
+      description: 'Set financial goals linked to your actual data. Track net worth, savings rate, passive income goals with automatic progress syncing.',
+      color: '#8b5cf6',
+      colorEnd: '#ec4899'
     },
     {
-      icon: '💾',
-      title: 'Complete Backup',
-      description: 'Backup now correctly detects all your data: expenses, income, budgets, savings goals, assets, liabilities, investments, and settings.',
+      icon: '🛡️',
+      title: 'Budget Enforcement',
+      description: 'Get real-time warnings when adding expenses that exceed your budget. See remaining budget instantly and confirm before overspending.',
+      color: '#ef4444',
+      colorEnd: '#f59e0b'
+    },
+    {
+      icon: '📊',
+      title: 'Investment Strategies',
+      description: 'Track Magic Formula, Dividend Growth, or custom investment strategies with holding period alerts and sell date reminders.',
       color: '#10b981',
       colorEnd: '#22d3ee'
     },
     {
-      icon: '🗂️',
-      title: 'Correct Table Names',
-      description: 'Fixed backup config to use app_budgets, app_savings_goals, app_filter_presets, and app_settings tables.',
-      color: '#f59e0b',
-      colorEnd: '#ef4444'
-    },
-    {
-      icon: '✨',
-      title: 'Better User Experience',
-      description: 'All containers now respect viewport width on mobile for a true native app feel.',
-      color: '#22d3ee',
-      colorEnd: '#3b82f6'
+      icon: '💡',
+      title: 'Goal Insights',
+      description: 'See projections, drift detection, and what-if analysis. Know if you\'re on track and get recommendations to reach your goals faster.',
+      color: '#3b82f6',
+      colorEnd: '#8b5cf6'
     }
   ]
 }
