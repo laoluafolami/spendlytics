@@ -502,6 +502,26 @@ export async function parseBackupFile(
 }
 
 /**
+ * Strip ID and user_id from record, returning clean data for insert
+ * This ensures we don't pass null IDs or foreign user_ids
+ */
+function prepareRecordForInsert(
+  record: Record<string, unknown>,
+  targetUserId: string
+): Record<string, unknown> {
+  // Create a new object excluding id and user_id
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(record)) {
+    // Skip id (let database auto-generate) and user_id (we'll set the new one)
+    if (key === 'id' || key === 'user_id') continue;
+    cleaned[key] = value;
+  }
+  // Set the current user's ID
+  cleaned.user_id = targetUserId;
+  return cleaned;
+}
+
+/**
  * Restore data from a backup
  */
 export async function restoreFromBackup(
@@ -532,15 +552,18 @@ export async function restoreFromBackup(
   };
 
   try {
-    // Restore localStorage first (for session ID)
+    // Restore localStorage first (for session ID) - but skip session_id to avoid conflicts
     if (restoreLocalStorage && backup.localStorage) {
       onProgress?.('Restoring preferences...', 10);
 
       for (const [key, value] of Object.entries(backup.localStorage)) {
+        // Skip session ID - we don't want to overwrite the current user's session
+        if (key === 'expense_tracker_session_id') continue;
+
         if (value !== null) {
           try {
             localStorage.setItem(key, value);
-          } catch (error) {
+          } catch (_error) {
             result.warnings.push(`Failed to restore localStorage key: ${key}`);
           }
         }
@@ -551,28 +574,29 @@ export async function restoreFromBackup(
     if (restoreSupabase && backup.supabase) {
       onProgress?.('Restoring cloud data...', 30);
 
-      // Use the session ID from backup or current session
-      const targetSessionId = backup.meta.sessionId || sessionId;
+      // Get authenticated user - ALL tables now use user_id
+      const { data: { user } } = await supabase.auth.getUser();
+      const targetUserId = user?.id;
 
-      // Restore expenses
+      if (!targetUserId) {
+        result.errors.push('User not authenticated. Please sign in to restore data.');
+        result.success = false;
+        return result;
+      }
+
+      // Restore expenses (uses user_id)
       if (backup.supabase.expenses?.length > 0) {
         onProgress?.('Restoring expenses...', 35);
 
         if (!mergeData) {
-          // Delete existing expenses first
-          await supabase.from('app_expenses').delete().eq('session_id', targetSessionId);
+          await supabase.from('expenses').delete().eq('user_id', targetUserId);
         }
 
-        // Insert expenses in batches
         const expenseBatches = chunkArray(backup.supabase.expenses as Record<string, unknown>[], 100);
         for (const batch of expenseBatches) {
-          const preparedBatch = batch.map((e) => ({
-            ...e,
-            session_id: targetSessionId,
-            id: mergeData ? e.id : undefined // Let DB generate new IDs if replacing
-          }));
+          const preparedBatch = batch.map((e) => prepareRecordForInsert(e, targetUserId));
 
-          const { error } = await supabase.from('app_expenses').upsert(preparedBatch);
+          const { error } = await supabase.from('expenses').insert(preparedBatch);
           if (error) {
             result.errors.push(`Expenses: ${error.message}`);
           } else {
@@ -581,52 +605,38 @@ export async function restoreFromBackup(
         }
       }
 
-      // Restore income (uses user_id instead of session_id)
+      // Restore income (uses user_id)
       if (backup.supabase.income?.length > 0) {
         onProgress?.('Restoring income...', 45);
 
-        // Get authenticated user for income table
-        const { data: { user } } = await supabase.auth.getUser();
-        const targetUserId = user?.id || backup.meta.userId;
+        if (!mergeData) {
+          await supabase.from('app_income').delete().eq('user_id', targetUserId);
+        }
 
-        if (targetUserId) {
-          if (!mergeData) {
-            await supabase.from('app_income').delete().eq('user_id', targetUserId);
+        const incomeBatches = chunkArray(backup.supabase.income as Record<string, unknown>[], 100);
+        for (const batch of incomeBatches) {
+          const preparedBatch = batch.map((i) => prepareRecordForInsert(i, targetUserId));
+
+          const { error } = await supabase.from('app_income').insert(preparedBatch);
+          if (error) {
+            result.errors.push(`Income: ${error.message}`);
+          } else {
+            result.restored.income += batch.length;
           }
-
-          const incomeBatches = chunkArray(backup.supabase.income as Record<string, unknown>[], 100);
-          for (const batch of incomeBatches) {
-            const preparedBatch = batch.map((i) => ({
-              ...i,
-              user_id: targetUserId,
-              id: mergeData ? i.id : undefined
-            }));
-
-            const { error } = await supabase.from('app_income').upsert(preparedBatch);
-            if (error) {
-              result.errors.push(`Income: ${error.message}`);
-            } else {
-              result.restored.income += batch.length;
-            }
-          }
-        } else {
-          result.warnings.push('Income: User not authenticated, skipped');
         }
       }
 
-      // Restore budgets
+      // Restore budgets (uses user_id)
       if (backup.supabase.budgets?.length > 0) {
         onProgress?.('Restoring budgets...', 55);
 
         if (!mergeData) {
-          await supabase.from('app_budgets').delete().eq('session_id', targetSessionId);
+          await supabase.from('app_budgets').delete().eq('user_id', targetUserId);
         }
 
         for (const budget of backup.supabase.budgets) {
-          const { error } = await supabase.from('app_budgets').upsert({
-            ...(budget as Record<string, unknown>),
-            session_id: targetSessionId
-          });
+          const prepared = prepareRecordForInsert(budget as Record<string, unknown>, targetUserId);
+          const { error } = await supabase.from('app_budgets').insert(prepared);
           if (error) {
             result.errors.push(`Budgets: ${error.message}`);
           } else {
@@ -635,19 +645,17 @@ export async function restoreFromBackup(
         }
       }
 
-      // Restore savings goals
+      // Restore savings goals (uses user_id)
       if (backup.supabase.savingsGoals?.length > 0) {
         onProgress?.('Restoring savings goals...', 60);
 
         if (!mergeData) {
-          await supabase.from('app_savings_goals').delete().eq('session_id', targetSessionId);
+          await supabase.from('app_savings_goals').delete().eq('user_id', targetUserId);
         }
 
         for (const goal of backup.supabase.savingsGoals) {
-          const { error } = await supabase.from('app_savings_goals').upsert({
-            ...(goal as Record<string, unknown>),
-            session_id: targetSessionId
-          });
+          const prepared = prepareRecordForInsert(goal as Record<string, unknown>, targetUserId);
+          const { error } = await supabase.from('app_savings_goals').insert(prepared);
           if (error) {
             result.errors.push(`Savings goals: ${error.message}`);
           } else {
@@ -656,19 +664,17 @@ export async function restoreFromBackup(
         }
       }
 
-      // Restore assets
+      // Restore assets (uses user_id)
       if (backup.supabase.assets?.length > 0) {
         onProgress?.('Restoring assets...', 70);
 
         if (!mergeData) {
-          await supabase.from('assets').delete().eq('session_id', targetSessionId);
+          await supabase.from('assets').delete().eq('user_id', targetUserId);
         }
 
         for (const asset of backup.supabase.assets) {
-          const { error } = await supabase.from('assets').upsert({
-            ...(asset as Record<string, unknown>),
-            session_id: targetSessionId
-          });
+          const prepared = prepareRecordForInsert(asset as Record<string, unknown>, targetUserId);
+          const { error } = await supabase.from('assets').insert(prepared);
           if (error) {
             result.errors.push(`Assets: ${error.message}`);
           } else {
@@ -677,19 +683,17 @@ export async function restoreFromBackup(
         }
       }
 
-      // Restore liabilities
+      // Restore liabilities (uses user_id)
       if (backup.supabase.liabilities?.length > 0) {
         onProgress?.('Restoring liabilities...', 75);
 
         if (!mergeData) {
-          await supabase.from('liabilities').delete().eq('session_id', targetSessionId);
+          await supabase.from('liabilities').delete().eq('user_id', targetUserId);
         }
 
         for (const liability of backup.supabase.liabilities) {
-          const { error } = await supabase.from('liabilities').upsert({
-            ...(liability as Record<string, unknown>),
-            session_id: targetSessionId
-          });
+          const prepared = prepareRecordForInsert(liability as Record<string, unknown>, targetUserId);
+          const { error } = await supabase.from('liabilities').insert(prepared);
           if (error) {
             result.errors.push(`Liabilities: ${error.message}`);
           } else {
@@ -698,19 +702,17 @@ export async function restoreFromBackup(
         }
       }
 
-      // Restore investments
+      // Restore investments (uses user_id)
       if (backup.supabase.investments?.length > 0) {
         onProgress?.('Restoring investments...', 80);
 
         if (!mergeData) {
-          await supabase.from('investments').delete().eq('session_id', targetSessionId);
+          await supabase.from('investments').delete().eq('user_id', targetUserId);
         }
 
         for (const investment of backup.supabase.investments) {
-          const { error } = await supabase.from('investments').upsert({
-            ...(investment as Record<string, unknown>),
-            session_id: targetSessionId
-          });
+          const prepared = prepareRecordForInsert(investment as Record<string, unknown>, targetUserId);
+          const { error } = await supabase.from('investments').insert(prepared);
           if (error) {
             result.errors.push(`Investments: ${error.message}`);
           } else {
@@ -719,15 +721,18 @@ export async function restoreFromBackup(
         }
       }
 
-      // Restore settings
+      // Restore settings (uses user_id)
       if (backup.supabase.settings?.length > 0) {
         onProgress?.('Restoring settings...', 90);
 
+        // For settings, delete existing first (upsert doesn't work well with user-level settings)
+        if (!mergeData) {
+          await supabase.from('app_settings').delete().eq('user_id', targetUserId);
+        }
+
         for (const setting of backup.supabase.settings) {
-          const { error } = await supabase.from('app_settings').upsert({
-            ...(setting as Record<string, unknown>),
-            session_id: targetSessionId
-          });
+          const prepared = prepareRecordForInsert(setting as Record<string, unknown>, targetUserId);
+          const { error } = await supabase.from('app_settings').insert(prepared);
           if (error) {
             result.errors.push(`Settings: ${error.message}`);
           } else {
