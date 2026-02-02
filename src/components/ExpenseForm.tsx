@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { PAYMENT_METHODS, RECURRENCE_FREQUENCIES, COMMON_TAGS, ExpenseFormData } from '../types/expense'
 import { getAllExpenseCategories, addCustomCategory, syncCategoriesFromDB } from '../utils/categoryUtils'
-import { Save, X, Plus, CreditCard, ArrowRight } from 'lucide-react'
+import { Save, X, Plus, CreditCard, ArrowRight, AlertTriangle, ShieldAlert } from 'lucide-react'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { useSettings } from '../contexts/SettingsContext'
+import { useAuth } from '../contexts/AuthContext'
 import { Liability } from '../types/finance'
 import { getActiveDebtLiabilities, processDebtPayment } from '../utils/integrationService'
+import { checkBudgetStatus, BudgetStatus } from '../utils/budgetAlertService'
 
 interface ExpenseFormProps {
   onSubmit: (data: ExpenseFormData) => Promise<void>
@@ -16,6 +18,10 @@ interface ExpenseFormProps {
 export default function ExpenseForm({ onSubmit, onCancel, initialData }: ExpenseFormProps) {
   const { currency, formatAmount } = useCurrency()
   const { settings } = useSettings()
+  const { user } = useAuth()
+  const [budgetStatus, setBudgetStatus] = useState<BudgetStatus | null>(null)
+  const [showBudgetWarning, setShowBudgetWarning] = useState(false)
+  const [pendingSubmit, setPendingSubmit] = useState(false)
   const [formData, setFormData] = useState<ExpenseFormData>(
     initialData || {
       amount: '',
@@ -70,6 +76,33 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
     }
   }
 
+  // Check budget status when category or amount changes
+  const checkBudget = useCallback(async () => {
+    if (!user || !formData.category || !formData.amount || !formData.date) {
+      setBudgetStatus(null)
+      return
+    }
+
+    const amount = parseFloat(formData.amount)
+    if (isNaN(amount) || amount <= 0) {
+      setBudgetStatus(null)
+      return
+    }
+
+    try {
+      const status = await checkBudgetStatus(user.id, formData.category, amount, formData.date)
+      setBudgetStatus(status)
+    } catch (error) {
+      console.error('Error checking budget:', error)
+      setBudgetStatus(null)
+    }
+  }, [user, formData.category, formData.amount, formData.date])
+
+  useEffect(() => {
+    const timeoutId = setTimeout(checkBudget, 300) // Debounce
+    return () => clearTimeout(timeoutId)
+  }, [checkBudget])
+
   // Handle liability selection
   const handleLiabilitySelect = (liabilityId: string) => {
     const selectedLiability = availableLiabilities.find(l => l.id === liabilityId)
@@ -82,7 +115,17 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Check if budget will be exceeded and show warning
+    if (budgetStatus?.willExceed && !pendingSubmit) {
+      setShowBudgetWarning(true)
+      return
+    }
+
     setLoading(true)
+    setPendingSubmit(false)
+    setShowBudgetWarning(false)
+
     try {
       await onSubmit(formData)
 
@@ -96,6 +139,8 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
         }
       }
 
+      // Reset form and budget status
+      setBudgetStatus(null)
       setFormData({
         amount: '',
         category: '',
@@ -113,6 +158,22 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle confirming expense despite budget warning
+  const handleConfirmOverBudget = () => {
+    setPendingSubmit(true)
+    setShowBudgetWarning(false)
+    // Trigger form submission programmatically
+    const form = document.querySelector('form')
+    if (form) {
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
+    }
+  }
+
+  const handleCancelOverBudget = () => {
+    setShowBudgetWarning(false)
+    setPendingSubmit(false)
   }
 
   const handleToggleTag = (tag: string) => {
@@ -152,6 +213,71 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
 
   return (
     <div className="space-y-4">
+      {/* Budget Exceeded Warning Modal */}
+      {showBudgetWarning && budgetStatus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 border border-red-200 dark:border-red-800">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                <ShieldAlert size={24} className="text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Budget Alert</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">This expense exceeds your budget</p>
+              </div>
+            </div>
+
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 mb-4">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Category:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{formData.category}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Monthly Budget:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{formatAmount(budgetStatus.budgetAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Already Spent:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{formatAmount(budgetStatus.spentAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">This Expense:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{formatAmount(parseFloat(formData.amount) || 0)}</span>
+                </div>
+                <div className="border-t border-red-200 dark:border-red-700 pt-2 mt-2">
+                  <div className="flex justify-between text-red-600 dark:text-red-400">
+                    <span className="font-semibold">Over Budget By:</span>
+                    <span className="font-bold">{formatAmount(budgetStatus.exceedAmount)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Are you sure you want to proceed? This will put you over your monthly budget for {formData.category}.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleCancelOverBudget}
+                className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmOverBudget}
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all"
+              >
+                Proceed Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Integration success message */}
       {integrationMessage && (
         <div className="p-4 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 animate-fade-in">
@@ -190,6 +316,57 @@ export default function ExpenseForm({ onSubmit, onCancel, initialData }: Expense
                 placeholder="0.00"
               />
             </div>
+
+            {/* Budget Status Indicator */}
+            {budgetStatus?.hasBudget && formData.amount && (
+              <div className={`mt-2 p-3 rounded-lg text-sm animate-fade-in ${
+                budgetStatus.status === 'exceeded'
+                  ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                  : budgetStatus.status === 'will_exceed'
+                  ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800'
+                  : budgetStatus.status === 'warning'
+                  ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                  : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} className={
+                    budgetStatus.status === 'exceeded' || budgetStatus.status === 'will_exceed'
+                      ? 'text-red-500'
+                      : budgetStatus.status === 'warning'
+                      ? 'text-yellow-500'
+                      : 'text-green-500'
+                  } />
+                  <span className={
+                    budgetStatus.status === 'exceeded' || budgetStatus.status === 'will_exceed'
+                      ? 'text-red-700 dark:text-red-300 font-medium'
+                      : budgetStatus.status === 'warning'
+                      ? 'text-yellow-700 dark:text-yellow-300 font-medium'
+                      : 'text-green-700 dark:text-green-300 font-medium'
+                  }>
+                    {budgetStatus.status === 'exceeded'
+                      ? `Budget already exceeded! Spent ${formatAmount(budgetStatus.spentAmount)} of ${formatAmount(budgetStatus.budgetAmount)}`
+                      : budgetStatus.status === 'will_exceed'
+                      ? `This will exceed your budget by ${formatAmount(budgetStatus.exceedAmount)}`
+                      : budgetStatus.status === 'warning'
+                      ? `${budgetStatus.percentUsed.toFixed(0)}% of budget used. ${formatAmount(budgetStatus.remainingAmount)} remaining`
+                      : `Within budget. ${formatAmount(budgetStatus.remainingAmount)} remaining`
+                    }
+                  </span>
+                </div>
+                <div className="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      budgetStatus.percentUsed >= 100
+                        ? 'bg-red-500'
+                        : budgetStatus.percentUsed >= 80
+                        ? 'bg-yellow-500'
+                        : 'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min(100, budgetStatus.percentUsed)}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="transform transition-all duration-200 hover:scale-[1.02]">
