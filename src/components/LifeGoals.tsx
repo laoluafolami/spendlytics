@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Plus, Target, Edit2, Trash2, X, TrendingUp, AlertCircle,
   CheckCircle2, Folder, ChevronDown, ChevronUp, Clock,
-  Play, Pause, Milestone, Layers
+  Play, Pause, Milestone, Layers, Lightbulb
 } from 'lucide-react'
+import GoalInsights from './GoalInsights'
 import { useAuth } from '../contexts/AuthContext'
 import { format } from 'date-fns'
 import {
@@ -55,7 +56,7 @@ export default function LifeGoals() {
   const [editingCategory, setEditingCategory] = useState<GoalCategory | null>(null)
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set())
   const [milestones, setMilestones] = useState<GoalMilestone[]>([])
-  const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'categories'>('active')
+  const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'categories' | 'insights'>('active')
 
   // Form state
   const [goalForm, setGoalForm] = useState<GoalFormData>({
@@ -716,12 +717,12 @@ export default function LifeGoals() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
-        {(['active', 'completed', 'categories'] as const).map(tab => (
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 pb-2 overflow-x-auto">
+        {(['active', 'completed', 'insights', 'categories'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
               activeTab === tab
                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -729,13 +730,35 @@ export default function LifeGoals() {
           >
             {tab === 'active' && 'Active Goals'}
             {tab === 'completed' && 'Completed'}
+            {tab === 'insights' && (
+              <>
+                <Lightbulb size={16} />
+                Insights
+              </>
+            )}
             {tab === 'categories' && 'Categories'}
           </button>
         ))}
       </div>
 
       {/* Content */}
-      {activeTab === 'categories' ? (
+      {activeTab === 'insights' ? (
+        <GoalInsights
+          goals={goals}
+          onNavigateToGoal={(goalId) => {
+            setActiveTab('active')
+            setExpandedGoals(new Set([goalId]))
+          }}
+          onMarkComplete={async (goalId) => {
+            try {
+              await updateLifeGoal(goalId, { status: 'completed' })
+              await loadData()
+            } catch (error) {
+              console.error('Error marking goal complete:', error)
+            }
+          }}
+        />
+      ) : activeTab === 'categories' ? (
         <div className="space-y-4">
           <div className="flex justify-end">
             <button

@@ -18,6 +18,7 @@ export type GoalTargetType = 'numeric' | 'boolean' | 'milestone'
  * Linked metric types for auto-tracking from app data
  */
 export type LinkedMetricType =
+  // Existing metrics
   | 'net_worth'
   | 'total_assets'
   | 'total_investments'
@@ -26,6 +27,16 @@ export type LinkedMetricType =
   | 'total_income'
   | 'total_real_estate'
   | 'custom'
+  // NEW metrics for enhanced portfolio tracking
+  | 'total_liabilities'           // Total debt outstanding
+  | 'debt_free_progress'          // (initial_debt - current_debt) / initial_debt * 100
+  | 'investment_gain'             // Total unrealized gains from portfolio
+  | 'portfolio_dividend_income'   // Annual dividend income from portfolio
+  | 'emergency_fund_months'       // Liquid assets / monthly expenses
+  | 'portfolio_count'             // Number of investment holdings
+  | 'real_estate_units'           // Count of real_estate assets
+  | 'winners_count'               // Investments with positive gain
+  | 'portfolio_yield_on_cost'     // Total YOC from portfolio
 
 /**
  * Goal priority levels
@@ -294,14 +305,25 @@ export const STATUS_CONFIG = {
  * Linked metric labels
  */
 export const LINKED_METRIC_LABELS: Record<LinkedMetricType, string> = {
+  // Existing
   net_worth: 'Net Worth',
   total_assets: 'Total Assets',
-  total_investments: 'Investment Portfolio',
+  total_investments: 'Investment Portfolio Value',
   passive_income: 'Passive Income (Monthly)',
   savings_rate: 'Savings Rate (%)',
   total_income: 'Total Income (Monthly)',
   total_real_estate: 'Real Estate Value',
   custom: 'Custom Calculation',
+  // NEW metrics
+  total_liabilities: 'Total Liabilities',
+  debt_free_progress: 'Debt Freedom Progress (%)',
+  investment_gain: 'Investment Unrealized Gains',
+  portfolio_dividend_income: 'Portfolio Annual Dividends',
+  emergency_fund_months: 'Emergency Fund (Months)',
+  portfolio_count: 'Number of Holdings',
+  real_estate_units: 'Real Estate Units Count',
+  winners_count: 'Winning Investments Count',
+  portfolio_yield_on_cost: 'Portfolio Yield on Cost (%)',
 }
 
 /**
@@ -329,7 +351,15 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     name: 'Become Debt Free',
     description: 'Pay off all consumer debt',
     category_suggestion: 'Financial Freedom',
-    target_type: 'boolean',
+    target_type: 'numeric',
+    suggested_unit: '%',
+    linked_metric: 'debt_free_progress',
+    default_milestones: [
+      { title: '25% Paid Off', percentage: 25 },
+      { title: '50% Paid Off', percentage: 50 },
+      { title: '75% Paid Off', percentage: 75 },
+      { title: 'Debt Free!', percentage: 100 },
+    ],
     icon: 'CheckCircle',
     color: '#8B5CF6',
   },
@@ -382,5 +412,110 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     linked_metric: 'savings_rate',
     icon: 'PiggyBank',
     color: '#EC4899',
+  },
+  // NEW templates for enhanced portfolio tracking
+  {
+    id: 'template-dividend-income',
+    name: 'Dividend Income Goal',
+    description: 'Build portfolio for annual dividend income',
+    category_suggestion: 'Passive Income',
+    target_type: 'numeric',
+    suggested_unit: '$/year',
+    linked_metric: 'portfolio_dividend_income',
+    default_milestones: [
+      { title: 'First $1,000/year', percentage: 10 },
+      { title: '$5,000/year', percentage: 50 },
+      { title: 'Target Income', percentage: 100 },
+    ],
+    icon: 'DollarSign',
+    color: '#10B981',
+  },
+  {
+    id: 'template-emergency-fund-months',
+    name: 'Emergency Fund (Months)',
+    description: 'Build emergency fund measured in months of expenses',
+    category_suggestion: 'Financial Security',
+    target_type: 'numeric',
+    suggested_unit: 'months',
+    linked_metric: 'emergency_fund_months',
+    default_milestones: [
+      { title: '1 Month', percentage: 17 },
+      { title: '3 Months', percentage: 50 },
+      { title: '6 Months', percentage: 100 },
+    ],
+    icon: 'Shield',
+    color: '#06B6D4',
+  },
+  {
+    id: 'template-portfolio-size',
+    name: 'Portfolio Diversification',
+    description: 'Build a diversified portfolio with target number of holdings',
+    category_suggestion: 'Investment Strategy',
+    target_type: 'numeric',
+    suggested_unit: 'holdings',
+    linked_metric: 'portfolio_count',
+    icon: 'BarChart3',
+    color: '#8B5CF6',
+  },
+  {
+    id: 'template-real-estate-units',
+    name: 'Real Estate Portfolio',
+    description: 'Acquire real estate investment properties',
+    category_suggestion: 'Real Estate',
+    target_type: 'numeric',
+    suggested_unit: 'units',
+    linked_metric: 'real_estate_units',
+    icon: 'Home',
+    color: '#F59E0B',
+  },
+  {
+    id: 'template-winning-portfolio',
+    name: 'Winning Investments',
+    description: 'Target number of investments in profit',
+    category_suggestion: 'Investment Strategy',
+    target_type: 'numeric',
+    suggested_unit: 'winners',
+    linked_metric: 'winners_count',
+    icon: 'Trophy',
+    color: '#10B981',
+  },
+  {
+    id: 'template-yield-on-cost',
+    name: 'Portfolio Yield on Cost',
+    description: 'Achieve target yield on cost for dividend portfolio',
+    category_suggestion: 'Dividend Growth',
+    target_type: 'numeric',
+    suggested_unit: '%',
+    linked_metric: 'portfolio_yield_on_cost',
+    icon: 'Percent',
+    color: '#EC4899',
+  },
+  // Non-financial templates
+  {
+    id: 'template-custom-numeric',
+    name: 'Custom Numeric Goal',
+    description: 'Track any numeric goal with manual updates',
+    category_suggestion: 'Custom',
+    target_type: 'numeric',
+    icon: 'Target',
+    color: '#6366F1',
+  },
+  {
+    id: 'template-milestone-goal',
+    name: 'Milestone Goal',
+    description: 'Track progress through key milestones',
+    category_suggestion: 'Custom',
+    target_type: 'milestone',
+    icon: 'Flag',
+    color: '#14B8A6',
+  },
+  {
+    id: 'template-yes-no-goal',
+    name: 'Yes/No Goal',
+    description: 'Track a binary achievement goal',
+    category_suggestion: 'Custom',
+    target_type: 'boolean',
+    icon: 'CheckCircle2',
+    color: '#84CC16',
   },
 ]

@@ -106,6 +106,31 @@ export interface Investment {
   is_active?: boolean
   created_at: string
   updated_at: string
+
+  // NEW fields for enhanced portfolio tracking
+  industry?: string                    // Industry/sector classification
+  dividend_per_share?: number          // Annual dividend per share
+  target_sell_date?: string            // Calculated from purchase + holding period
+  holding_period_months?: number       // Strategy holding period (e.g., 12 for Magic Formula)
+  last_price_update?: string           // Timestamp of last price fetch
+
+  // Strategy-related fields (optional)
+  strategy_id?: string                 // Link to investment strategy
+  buy_date?: string                    // Actual buy date for strategy tracking
+  strategy_metrics?: {                 // Strategy-specific metrics (e.g., Magic Formula)
+    roc_rank?: number
+    earnings_yield_rank?: number
+    combined_rank?: number
+  }
+}
+
+// Computed investment metrics (derived, not stored)
+export interface InvestmentComputedMetrics {
+  is_winner: boolean                   // gain_loss > 0
+  dividend_yield_on_cost: number       // (dividend_per_share * shares) / cost_basis * 100
+  days_held: number                    // Today - purchase_date
+  days_until_sell: number | null       // target_sell_date - Today
+  annual_dividend_income: number       // dividend_per_share * shares
 }
 
 // Income Allocation Buckets (like in the P&L sheet)
@@ -258,3 +283,53 @@ export interface FinancialSummary {
   expenseChange: number
   netWorthChange: number
 }
+
+// Portfolio snapshot for historical tracking
+export interface PortfolioSnapshot {
+  id: string
+  user_id: string
+  snapshot_date: string
+  total_value: number
+  total_cost: number
+  total_gain: number
+  total_dividend_income: number
+  holdings_count: number
+  winners_count: number
+  losers_count: number
+  created_at: string
+}
+
+// Industry/Sector classifications
+export const INDUSTRIES = [
+  'Technology',
+  'Healthcare',
+  'Financial Services',
+  'Consumer Cyclical',
+  'Consumer Defensive',
+  'Industrials',
+  'Energy',
+  'Utilities',
+  'Real Estate',
+  'Basic Materials',
+  'Communication Services',
+  'Aerospace & Defense',
+  'Automotive',
+  'Banking',
+  'Biotechnology',
+  'Chemicals',
+  'Construction',
+  'E-Commerce',
+  'Insurance',
+  'Media',
+  'Mining',
+  'Pharmaceuticals',
+  'Retail',
+  'Semiconductors',
+  'Software',
+  'Telecommunications',
+  'Transportation',
+  'Crypto/Blockchain',
+  'Other',
+] as const
+
+export type IndustryType = typeof INDUSTRIES[number]

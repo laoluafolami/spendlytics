@@ -13,6 +13,13 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  Calendar,
+  Clock,
+  Award,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Percent,
 } from 'lucide-react'
 import {
   PieChart,
@@ -21,7 +28,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts'
-import { Investment } from '../types/finance'
+import { Investment, INDUSTRIES } from '../types/finance'
 // Price feed service for auto-updating stock/crypto prices
 import {
   fetchMixedPrices,
@@ -59,31 +66,22 @@ const INVESTMENT_TYPES = [
   { value: 'other', label: 'Other' },
 ]
 
-const SECTORS = [
-  'Technology',
-  'Healthcare',
-  'Financial Services',
-  'Consumer Cyclical',
-  'Consumer Defensive',
-  'Industrials',
-  'Energy',
-  'Utilities',
-  'Real Estate',
-  'Basic Materials',
-  'Communication Services',
-  'Other',
-]
+// Use INDUSTRIES from types/finance.ts for sector/industry selection
 
 interface InvestmentFormData {
   symbol: string
   name: string
   type: Investment['type']
   sector: string
+  industry: string
   shares: number
   average_cost: number
   current_price: number
   dividend_yield?: number
   last_dividend?: number
+  dividend_per_share?: number
+  purchase_date?: string
+  holding_period_months?: number
   notes?: string
   currency: string
 }
@@ -93,13 +91,46 @@ const initialFormData: InvestmentFormData = {
   name: '',
   type: 'stock',
   sector: 'Technology',
+  industry: 'Technology',
   shares: 0,
   average_cost: 0,
   current_price: 0,
   dividend_yield: undefined,
   last_dividend: undefined,
+  dividend_per_share: undefined,
+  purchase_date: undefined,
+  holding_period_months: undefined,
   notes: '',
   currency: 'NGN', // Will be overridden by current currency in component
+}
+
+// Helper functions for computed metrics
+function calculateDaysHeld(purchaseDate?: string): number {
+  if (!purchaseDate) return 0
+  const purchase = new Date(purchaseDate)
+  const today = new Date()
+  const diffTime = today.getTime() - purchase.getTime()
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24))
+}
+
+function calculateDaysUntilSell(purchaseDate?: string, holdingPeriodMonths?: number): number | null {
+  if (!purchaseDate || !holdingPeriodMonths) return null
+  const purchase = new Date(purchaseDate)
+  const targetSell = new Date(purchase)
+  targetSell.setMonth(targetSell.getMonth() + holdingPeriodMonths)
+  const today = new Date()
+  const diffTime = targetSell.getTime() - today.getTime()
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+}
+
+function calculateYieldOnCost(dividendPerShare: number | undefined, shares: number, costBasis: number): number {
+  if (!dividendPerShare || costBasis <= 0) return 0
+  return ((dividendPerShare * shares) / costBasis) * 100
+}
+
+function calculateAnnualDividendIncome(dividendPerShare: number | undefined, shares: number): number {
+  if (!dividendPerShare) return 0
+  return dividendPerShare * shares
 }
 
 const InvestmentsManager: React.FC = () => {
@@ -233,11 +264,21 @@ const InvestmentsManager: React.FC = () => {
     const gainLoss = marketValue - costBasis
     const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0
 
+    // Calculate target sell date if holding period is set
+    let targetSellDate: string | undefined
+    if (formData.purchase_date && formData.holding_period_months) {
+      const purchaseDate = new Date(formData.purchase_date)
+      const sellDate = new Date(purchaseDate)
+      sellDate.setMonth(sellDate.getMonth() + formData.holding_period_months)
+      targetSellDate = sellDate.toISOString().split('T')[0]
+    }
+
     const investmentData = {
       symbol: formData.symbol.toUpperCase(),
       name: formData.name,
       type: formData.type,
       sector: formData.sector,
+      industry: formData.industry,
       shares: formData.shares,
       average_cost: formData.average_cost,
       current_price: formData.current_price,
@@ -247,6 +288,10 @@ const InvestmentsManager: React.FC = () => {
       gain_loss_percent: gainLossPercent,
       dividend_yield: formData.dividend_yield,
       last_dividend: formData.last_dividend,
+      dividend_per_share: formData.dividend_per_share,
+      purchase_date: formData.purchase_date,
+      holding_period_months: formData.holding_period_months,
+      target_sell_date: targetSellDate,
       notes: formData.notes,
     }
 
@@ -279,11 +324,15 @@ const InvestmentsManager: React.FC = () => {
       name: investment.name,
       type: investment.type,
       sector: investment.sector || 'Other',
+      industry: investment.industry || investment.sector || 'Other',
       shares: investment.shares,
       average_cost: investment.average_cost,
       current_price: investment.current_price,
       dividend_yield: investment.dividend_yield,
       last_dividend: investment.last_dividend,
+      dividend_per_share: investment.dividend_per_share,
+      purchase_date: investment.purchase_date,
+      holding_period_months: investment.holding_period_months,
       notes: investment.notes,
       currency: investment.currency || currency.code,
     })
@@ -349,16 +398,34 @@ const InvestmentsManager: React.FC = () => {
     const totalGainLoss = totalMarketValue - totalCostBasis
     const totalGainLossPercent = totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0
 
+    // Calculate dividends - prefer dividend_per_share if available
     const totalDividends = investments.reduce((sum, inv) => {
-      if (inv.dividend_yield && inv.market_value) {
+      if (inv.dividend_per_share) {
+        return sum + (inv.dividend_per_share * inv.shares)
+      } else if (inv.dividend_yield && inv.market_value) {
         return sum + (inv.market_value * (inv.dividend_yield / 100))
       }
       return sum
     }, 0)
 
-    // By sector
+    // Yield on Cost (total dividends / total cost basis)
+    const yieldOnCost = totalCostBasis > 0 ? (totalDividends / totalCostBasis) * 100 : 0
+
+    // Win/Loss counts
+    const winners = investments.filter(inv => inv.gain_loss > 0)
+    const losers = investments.filter(inv => inv.gain_loss < 0)
+    const winnersCount = winners.length
+    const losersCount = losers.length
+
+    // Holdings approaching sell date (within 30 days)
+    const holdingsNearingSell = investments.filter(inv => {
+      const daysUntil = calculateDaysUntilSell(inv.purchase_date, inv.holding_period_months)
+      return daysUntil !== null && daysUntil > 0 && daysUntil <= 30
+    })
+
+    // By sector/industry
     const bySector = investments.reduce((acc, inv) => {
-      const sector = inv.sector || 'Other'
+      const sector = inv.industry || inv.sector || 'Other'
       if (!acc[sector]) acc[sector] = 0
       acc[sector] += inv.market_value
       return acc
@@ -377,6 +444,10 @@ const InvestmentsManager: React.FC = () => {
       totalGainLoss,
       totalGainLossPercent,
       totalDividends,
+      yieldOnCost,
+      winnersCount,
+      losersCount,
+      holdingsNearingSell,
       bySector,
       byType,
     }
@@ -499,7 +570,7 @@ const InvestmentsManager: React.FC = () => {
         </div>
       )}
 
-      {/* Portfolio Summary */}
+      {/* Portfolio Summary - Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-gray-800 dark:text-white">
           <div className="flex items-center gap-2 text-blue-200 mb-2">
@@ -551,6 +622,78 @@ const InvestmentsManager: React.FC = () => {
           <p className="text-amber-200 text-sm mt-1">
             {Object.keys(calculations.bySector).length} sectors
           </p>
+        </div>
+      </div>
+
+      {/* Portfolio Summary - Row 2 (Enhanced Metrics) */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Yield on Cost */}
+        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl p-4 border border-white/20 dark:border-gray-700/50 shadow-lg">
+          <div className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400 mb-2">
+            <Percent className="w-4 h-4" />
+            <span className="text-sm font-medium">Yield on Cost (YOC)</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-800 dark:text-white">
+            {calculations.yieldOnCost.toFixed(2)}%
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            vs Market Yield: {calculations.totalMarketValue > 0
+              ? ((calculations.totalDividends / calculations.totalMarketValue) * 100).toFixed(2)
+              : 0}%
+          </p>
+        </div>
+
+        {/* Win/Loss Stats */}
+        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl p-4 border border-white/20 dark:border-gray-700/50 shadow-lg">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
+            <Award className="w-4 h-4" />
+            <span className="text-sm font-medium">Win/Loss Record</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <span className="text-xl font-bold text-green-600 dark:text-green-400">{calculations.winnersCount}</span>
+            </div>
+            <span className="text-gray-400">/</span>
+            <div className="flex items-center gap-1">
+              <XCircle className="w-5 h-5 text-red-500" />
+              <span className="text-xl font-bold text-red-600 dark:text-red-400">{calculations.losersCount}</span>
+            </div>
+          </div>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            Win Rate: {investments.length > 0
+              ? ((calculations.winnersCount / investments.length) * 100).toFixed(0)
+              : 0}%
+          </p>
+        </div>
+
+        {/* Holdings Nearing Sell Date */}
+        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-xl p-4 border border-white/20 dark:border-gray-700/50 shadow-lg md:col-span-2">
+          <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-2">
+            <Clock className="w-4 h-4" />
+            <span className="text-sm font-medium">Approaching Sell Date (30 days)</span>
+          </div>
+          {calculations.holdingsNearingSell.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-sm">No holdings nearing sell date</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {calculations.holdingsNearingSell.map(inv => {
+                const daysUntil = calculateDaysUntilSell(inv.purchase_date, inv.holding_period_months)
+                return (
+                  <div
+                    key={inv.id}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 dark:bg-orange-900/30 rounded-lg"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                    <span className="text-sm font-medium text-gray-800 dark:text-white">{inv.symbol}</span>
+                    <span className="text-xs text-orange-600 dark:text-orange-400">
+                      {daysUntil} days
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -740,12 +883,60 @@ const InvestmentsManager: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-200/30 dark:border-gray-700/30">
-                    {investment.dividend_yield ? (
-                      <span className="text-sm text-purple-600 dark:text-purple-400">Yield: {investment.dividend_yield}%</span>
-                    ) : (
-                      <span className="text-sm text-gray-400">No dividend</span>
+                  <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-200/30 dark:border-gray-700/30">
+                    {/* Win/Loss Badge */}
+                    {investment.gain_loss > 0 ? (
+                      <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                        <CheckCircle className="w-3 h-3" />
+                        Winner
+                      </span>
+                    ) : investment.gain_loss < 0 ? (
+                      <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                        <XCircle className="w-3 h-3" />
+                        Loser
+                      </span>
+                    ) : null}
+
+                    {/* Dividend Info */}
+                    {investment.dividend_per_share ? (
+                      <span className="text-xs text-purple-600 dark:text-purple-400">
+                        YOC: {calculateYieldOnCost(investment.dividend_per_share, investment.shares, investment.cost_basis).toFixed(2)}%
+                      </span>
+                    ) : investment.dividend_yield ? (
+                      <span className="text-xs text-purple-600 dark:text-purple-400">Yield: {investment.dividend_yield}%</span>
+                    ) : null}
+
+                    {/* Days Held */}
+                    {investment.purchase_date && (
+                      <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                        <Calendar className="w-3 h-3" />
+                        {calculateDaysHeld(investment.purchase_date)}d held
+                      </span>
                     )}
+
+                    {/* Days until sell */}
+                    {(() => {
+                      const daysUntil = calculateDaysUntilSell(investment.purchase_date, investment.holding_period_months)
+                      if (daysUntil !== null && daysUntil > 0) {
+                        return (
+                          <span className={`flex items-center gap-1 text-xs ${daysUntil <= 30 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                            <Clock className="w-3 h-3" />
+                            {daysUntil}d to sell
+                          </span>
+                        )
+                      } else if (daysUntil !== null && daysUntil <= 0) {
+                        return (
+                          <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            Ready to sell
+                          </span>
+                        )
+                      }
+                      return null
+                    })()}
+
+                    <div className="flex-1" />
+
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEdit(investment)}
@@ -778,65 +969,111 @@ const InvestmentsManager: React.FC = () => {
                     <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Current Price</th>
                     <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Market Value</th>
                     <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Gain/Loss</th>
-                    <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Yield</th>
+                    <th className="text-right text-gray-500 dark:text-gray-400 font-medium px-4 py-3">YOC</th>
+                    <th className="text-center text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Status</th>
                     <th className="text-center text-gray-500 dark:text-gray-400 font-medium px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvestments.map((investment) => (
-                    <tr key={`desktop-${investment.id}`} className="border-t border-gray-200 dark:border-gray-700 hover:bg-white/50 dark:hover:bg-gray-700/30">
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="text-gray-800 dark:text-white font-medium">{investment.symbol}</p>
-                          <p className="text-gray-500 dark:text-gray-400 text-sm truncate max-w-[150px]">{investment.name}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-800 dark:text-white">{investment.shares.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
-                        {formatAmount(investment.average_cost)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <input
-                          type="number"
-                          value={investment.current_price}
-                          onChange={(e) => updatePrice(investment.id, parseFloat(e.target.value) || 0)}
-                          className="w-24 px-2 py-1 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white text-right focus:outline-none focus:border-blue-500"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-800 dark:text-white font-medium">
-                        {formatAmount(investment.market_value)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div>
-                          <p className={investment.gain_loss >= 0 ? 'text-green-500' : 'text-red-500'}>
-                            {formatAmount(investment.gain_loss)}
-                          </p>
-                          <p className={`text-sm ${investment.gain_loss >= 0 ? 'text-green-500/70' : 'text-red-500/70'}`}>
-                            {formatPercent(investment.gain_loss_percent)}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right text-purple-500">
-                        {investment.dividend_yield ? `${investment.dividend_yield}%` : '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleEdit(investment)}
-                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded transition-colors"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(investment.id)}
-                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredInvestments.map((investment) => {
+                    const yoc = calculateYieldOnCost(investment.dividend_per_share, investment.shares, investment.cost_basis)
+                    const daysHeld = calculateDaysHeld(investment.purchase_date)
+                    const daysUntilSell = calculateDaysUntilSell(investment.purchase_date, investment.holding_period_months)
+
+                    return (
+                      <tr key={`desktop-${investment.id}`} className="border-t border-gray-200 dark:border-gray-700 hover:bg-white/50 dark:hover:bg-gray-700/30">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {/* Win/Loss indicator */}
+                            {investment.gain_loss > 0 ? (
+                              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                            ) : investment.gain_loss < 0 ? (
+                              <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                            ) : (
+                              <div className="w-4 h-4 flex-shrink-0" />
+                            )}
+                            <div>
+                              <p className="text-gray-800 dark:text-white font-medium">{investment.symbol}</p>
+                              <p className="text-gray-500 dark:text-gray-400 text-sm truncate max-w-[120px]">{investment.name}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-800 dark:text-white">{investment.shares.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
+                          {formatAmount(investment.average_cost)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <input
+                            type="number"
+                            value={investment.current_price}
+                            onChange={(e) => updatePrice(investment.id, parseFloat(e.target.value) || 0)}
+                            className="w-24 px-2 py-1 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white text-right focus:outline-none focus:border-blue-500"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-800 dark:text-white font-medium">
+                          {formatAmount(investment.market_value)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div>
+                            <p className={investment.gain_loss >= 0 ? 'text-green-500' : 'text-red-500'}>
+                              {formatAmount(investment.gain_loss)}
+                            </p>
+                            <p className={`text-sm ${investment.gain_loss >= 0 ? 'text-green-500/70' : 'text-red-500/70'}`}>
+                              {formatPercent(investment.gain_loss_percent)}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {investment.dividend_per_share ? (
+                            <div>
+                              <p className="text-cyan-600 dark:text-cyan-400">{yoc.toFixed(2)}%</p>
+                              <p className="text-gray-400 text-xs">{formatAmount(calculateAnnualDividendIncome(investment.dividend_per_share, investment.shares))}/yr</p>
+                            </div>
+                          ) : investment.dividend_yield ? (
+                            <span className="text-purple-500">{investment.dividend_yield}%</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            {investment.purchase_date && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {daysHeld}d held
+                              </span>
+                            )}
+                            {daysUntilSell !== null && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                daysUntilSell <= 0
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                  : daysUntilSell <= 30
+                                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                              }`}>
+                                {daysUntilSell <= 0 ? 'Ready' : `${daysUntilSell}d to sell`}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEdit(investment)}
+                              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded transition-colors"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(investment.id)}
+                              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -968,14 +1205,14 @@ const InvestmentsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Sector</label>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Industry/Sector</label>
                 <select
-                  value={formData.sector}
-                  onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  value={formData.industry}
+                  onChange={(e) => setFormData({ ...formData, industry: e.target.value, sector: e.target.value })}
                   className="w-full px-3 py-2 bg-white/50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-white focus:outline-none focus:border-blue-500"
                 >
-                  {SECTORS.map(sector => (
-                    <option key={sector} value={sector}>{sector}</option>
+                  {INDUSTRIES.map(industry => (
+                    <option key={industry} value={industry}>{industry}</option>
                   ))}
                 </select>
               </div>
@@ -1019,9 +1256,47 @@ const InvestmentsManager: React.FC = () => {
                 </div>
               </div>
 
+              {/* Purchase Date & Holding Period */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Dividend Yield %</label>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Purchase Date</label>
+                  <input
+                    type="date"
+                    value={formData.purchase_date || ''}
+                    onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value || undefined })}
+                    className="w-full px-3 py-2 bg-white/50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Holding Period (months)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formData.holding_period_months || ''}
+                    onChange={(e) => setFormData({ ...formData, holding_period_months: parseInt(e.target.value) || undefined })}
+                    placeholder="e.g., 12 for 1-year"
+                    className="w-full px-3 py-2 bg-white/50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Dividend Fields */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Annual Div/Share</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.dividend_per_share || ''}
+                    onChange={(e) => setFormData({ ...formData, dividend_per_share: parseFloat(e.target.value) || undefined })}
+                    placeholder="e.g., 0.92"
+                    className="w-full px-3 py-2 bg-white/50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Div Yield %</label>
                   <input
                     type="number"
                     min="0"
@@ -1092,6 +1367,36 @@ const InvestmentsManager: React.FC = () => {
                           : '0%'}
                       </span>
                     </div>
+                    {formData.dividend_per_share && (
+                      <>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Annual Dividends:</span>
+                          <span className="text-purple-400 ml-2">
+                            {formatAmount(formData.dividend_per_share * formData.shares)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Yield on Cost:</span>
+                          <span className="text-cyan-400 ml-2">
+                            {calculateYieldOnCost(formData.dividend_per_share, formData.shares, formData.shares * formData.average_cost).toFixed(2)}%
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    {formData.purchase_date && formData.holding_period_months && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500 dark:text-gray-400">Target Sell Date:</span>
+                        <span className="text-orange-400 ml-2">
+                          {(() => {
+                            const purchaseDate = new Date(formData.purchase_date)
+                            const sellDate = new Date(purchaseDate)
+                            sellDate.setMonth(sellDate.getMonth() + formData.holding_period_months)
+                            const daysUntil = calculateDaysUntilSell(formData.purchase_date, formData.holding_period_months)
+                            return `${sellDate.toLocaleDateString()} (${daysUntil && daysUntil > 0 ? `${daysUntil} days` : 'Ready to sell'})`
+                          })()}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

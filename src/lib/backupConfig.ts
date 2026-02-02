@@ -100,6 +100,28 @@ export const SUPABASE_TABLES = {
     description: 'Drift detection settings'
   },
 
+  // Portfolio Tracking
+  portfolioSnapshots: {
+    table: 'portfolio_snapshots',
+    sessionField: 'user_id',
+    orderBy: { field: 'snapshot_date', ascending: false },
+    description: 'Historical portfolio value records'
+  },
+
+  // Investment Strategies
+  investmentStrategies: {
+    table: 'investment_strategies',
+    sessionField: 'user_id',
+    orderBy: { field: 'created_at', ascending: false },
+    description: 'Investment strategy configurations'
+  },
+  strategyHoldings: {
+    table: 'strategy_holdings',
+    sessionField: 'user_id',
+    orderBy: { field: 'buy_date', ascending: false },
+    description: 'Holdings linked to investment strategies'
+  },
+
   // App configuration
   filterPresets: {
     table: 'app_filter_presets',
@@ -217,7 +239,11 @@ export const LOCALSTORAGE_KEYS = {
       'spendlytics_goal_milestones',
       'spendlytics_goal_progress',
       'spendlytics_drift_settings',
-      'spendlytics_life_goals_sync_queue'
+      'spendlytics_life_goals_sync_queue',
+      'spendlytics_investment_strategies',
+      'spendlytics_strategy_holdings',
+      'spendlytics_strategy_snapshots',
+      'spendlytics_portfolio_snapshots'
     ],
     description: 'Cached data for offline access'
   },

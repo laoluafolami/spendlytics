@@ -746,6 +746,103 @@ export async function getLinkedMetricValue(metric: LinkedMetricType): Promise<nu
         return ((totalIncome - totalExpenses) / totalIncome) * 100
       }
 
+      // NEW METRICS IMPLEMENTATION
+
+      case 'total_liabilities': {
+        const liabilities = await getLiabilities()
+        return liabilities.reduce((sum, l) => sum + (l.current_balance || 0), 0)
+      }
+
+      case 'debt_free_progress': {
+        // This metric requires an initial debt value to calculate progress
+        // For now, we return 100 - (current_debt_as_percent_of_original)
+        // The user should set the target_value to their initial debt amount
+        const liabilities = await getLiabilities()
+        const currentDebt = liabilities.reduce((sum, l) => sum + (l.current_balance || 0), 0)
+        const initialDebt = liabilities.reduce((sum, l) => sum + (l.principal_amount || l.current_balance || 0), 0)
+
+        if (initialDebt === 0) return 100 // No debt = 100% debt free
+        const paidOff = initialDebt - currentDebt
+        return Math.max(0, Math.min(100, (paidOff / initialDebt) * 100))
+      }
+
+      case 'investment_gain': {
+        const investments = await getInvestments()
+        return investments.reduce((sum, i) => sum + (i.gain_loss || 0), 0)
+      }
+
+      case 'portfolio_dividend_income': {
+        const investments = await getInvestments()
+        return investments.reduce((sum, inv) => {
+          // Prefer dividend_per_share if available
+          if (inv.dividend_per_share) {
+            return sum + (inv.dividend_per_share * inv.shares)
+          } else if (inv.dividend_yield && inv.market_value) {
+            return sum + (inv.market_value * (inv.dividend_yield / 100))
+          }
+          return sum
+        }, 0)
+      }
+
+      case 'emergency_fund_months': {
+        const userId = await getCurrentUserId()
+        if (!userId) return 0
+
+        // Get liquid assets
+        const assets = await getAssets()
+        const liquidAssets = assets
+          .filter(a => a.category === 'liquid' || a.type === 'cash' || a.type === 'bank_account')
+          .reduce((sum, a) => sum + (a.value || 0), 0)
+
+        // Calculate average monthly expenses (last 3 months)
+        const now = new Date()
+        const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString()
+
+        const { data: expenses } = await supabase
+          .from('expenses')
+          .select('amount')
+          .eq('user_id', userId)
+          .gte('date', threeMonthsAgo)
+
+        if (!expenses || expenses.length === 0) return 0
+        const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+        const monthlyExpenses = totalExpenses / 3
+
+        if (monthlyExpenses === 0) return 0
+        return liquidAssets / monthlyExpenses
+      }
+
+      case 'portfolio_count': {
+        const investments = await getInvestments()
+        return investments.length
+      }
+
+      case 'real_estate_units': {
+        const assets = await getAssets()
+        return assets.filter(a => a.type === 'real_estate').length
+      }
+
+      case 'winners_count': {
+        const investments = await getInvestments()
+        return investments.filter(i => i.gain_loss > 0).length
+      }
+
+      case 'portfolio_yield_on_cost': {
+        const investments = await getInvestments()
+        const totalDividends = investments.reduce((sum, inv) => {
+          if (inv.dividend_per_share) {
+            return sum + (inv.dividend_per_share * inv.shares)
+          } else if (inv.dividend_yield && inv.market_value) {
+            return sum + (inv.market_value * (inv.dividend_yield / 100))
+          }
+          return sum
+        }, 0)
+        const totalCostBasis = investments.reduce((sum, i) => sum + (i.cost_basis || 0), 0)
+
+        if (totalCostBasis === 0) return 0
+        return (totalDividends / totalCostBasis) * 100
+      }
+
       case 'custom':
       default:
         return 0
@@ -795,8 +892,13 @@ export async function syncLinkedGoals(): Promise<{ synced: number; errors: strin
  */
 export async function getAllMetricValues(): Promise<Record<LinkedMetricType, number>> {
   const metrics: LinkedMetricType[] = [
+    // Existing
     'net_worth', 'total_assets', 'total_investments', 'passive_income',
-    'savings_rate', 'total_income', 'total_real_estate', 'custom'
+    'savings_rate', 'total_income', 'total_real_estate', 'custom',
+    // New metrics
+    'total_liabilities', 'debt_free_progress', 'investment_gain',
+    'portfolio_dividend_income', 'emergency_fund_months', 'portfolio_count',
+    'real_estate_units', 'winners_count', 'portfolio_yield_on_cost'
   ]
 
   const values: Record<string, number> = {}
