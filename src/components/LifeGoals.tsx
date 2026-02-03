@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Plus, Target, Edit2, Trash2, X, TrendingUp, AlertCircle,
   CheckCircle2, Folder, ChevronDown, ChevronUp, Clock,
-  Play, Pause, Milestone, Layers, Lightbulb
+  Play, Pause, Milestone, Layers, Lightbulb, Download, Sparkles
 } from 'lucide-react'
 import GoalInsights from './GoalInsights'
+import { importPersonalGoals, getImportSummary, hasPersonalGoalsImported } from '../utils/personalGoalsSeed'
 import { useAuth } from '../contexts/AuthContext'
 import { format } from 'date-fns'
 import {
@@ -52,6 +53,10 @@ export default function LifeGoals() {
   const [showGoalForm, setShowGoalForm] = useState(false)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [alreadyImported, setAlreadyImported] = useState(false)
   const [editingGoal, setEditingGoal] = useState<LifeGoal | null>(null)
   const [editingCategory, setEditingCategory] = useState<GoalCategory | null>(null)
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set())
@@ -90,7 +95,13 @@ export default function LifeGoals() {
 
   useEffect(() => {
     loadData()
+    checkImportStatus()
   }, [user])
+
+  const checkImportStatus = async () => {
+    const imported = await hasPersonalGoalsImported()
+    setAlreadyImported(imported)
+  }
 
   const loadData = async () => {
     if (!user) {
@@ -350,6 +361,40 @@ export default function LifeGoals() {
 
     setShowTemplates(false)
     setShowGoalForm(true)
+  }
+
+  const handleImportPersonalGoals = async () => {
+    if (!user) return
+
+    try {
+      setImporting(true)
+      setImportResult(null)
+
+      const result = await importPersonalGoals()
+
+      if (result.success) {
+        setImportResult({
+          success: true,
+          message: `Imported ${result.categoriesCreated} categories, ${result.goalsCreated} goals, and ${result.milestonesCreated} milestones!`
+        })
+        setAlreadyImported(true)
+        await loadData()
+      } else {
+        setImportResult({
+          success: false,
+          message: `Import completed with ${result.errors.length} errors. Created ${result.goalsCreated} goals.`
+        })
+        await loadData()
+      }
+    } catch (error) {
+      setImportResult({
+        success: false,
+        message: 'Failed to import goals. Please try again.'
+      })
+      console.error('Import error:', error)
+    } finally {
+      setImporting(false)
+    }
   }
 
   const resetGoalForm = () => {
@@ -647,7 +692,16 @@ export default function LifeGoals() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg"
+            title="Import your 10-year life goals plan"
+          >
+            <Sparkles size={18} />
+            <span className="hidden sm:inline">Import My Goals</span>
+            <span className="sm:hidden">Import</span>
+          </button>
           <button
             onClick={() => setShowTemplates(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -1289,6 +1343,155 @@ export default function LifeGoals() {
                   Or create a custom goal from scratch
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Personal Goals Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="text-amber-500" size={20} />
+                Import Personal Goals
+              </h2>
+              <button
+                onClick={() => {
+                  setShowImportModal(false)
+                  setImportResult(null)
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {importResult ? (
+                // Show result
+                <div className="text-center py-6">
+                  <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${
+                    importResult.success
+                      ? 'bg-green-100 dark:bg-green-900/30'
+                      : 'bg-orange-100 dark:bg-orange-900/30'
+                  }`}>
+                    {importResult.success ? (
+                      <CheckCircle2 size={32} className="text-green-600 dark:text-green-400" />
+                    ) : (
+                      <AlertCircle size={32} className="text-orange-600 dark:text-orange-400" />
+                    )}
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+                    {importResult.success ? 'Import Complete!' : 'Import Finished'}
+                  </h3>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400">
+                    {importResult.message}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowImportModal(false)
+                      setImportResult(null)
+                    }}
+                    className="mt-6 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
+                  >
+                    View My Goals
+                  </button>
+                </div>
+              ) : importing ? (
+                // Show loading
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 border-4 border-amber-200 dark:border-amber-800 border-t-amber-600 dark:border-t-amber-400 rounded-full animate-spin mx-auto"></div>
+                  <p className="mt-4 text-gray-600 dark:text-gray-400">Importing your goals...</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Creating categories, goals, and milestones</p>
+                </div>
+              ) : (
+                // Show confirmation
+                <>
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 mb-6">
+                    <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                      Your Personal 10-Year Goals Plan
+                    </h3>
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      Import your complete life goals framework based on your Goals.pdf, organized by:
+                    </p>
+                  </div>
+
+                  {(() => {
+                    const summary = getImportSummary()
+                    return (
+                      <div className="space-y-4">
+                        {/* Summary stats */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{summary.categories}</p>
+                            <p className="text-xs text-blue-700 dark:text-blue-300">Categories</p>
+                          </div>
+                          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3 text-center">
+                            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{summary.goals}</p>
+                            <p className="text-xs text-purple-700 dark:text-purple-300">Goals</p>
+                          </div>
+                          <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center">
+                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{summary.totalMilestones}</p>
+                            <p className="text-xs text-emerald-700 dark:text-emerald-300">Milestones</p>
+                          </div>
+                        </div>
+
+                        {/* Categories breakdown */}
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories to Create:</h4>
+                          {summary.breakdown.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{item.category}</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{item.goalCount} goals</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Key goals preview */}
+                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Key Goals Include:</h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                            <li>- Emergency Fund (6 months)</li>
+                            <li>- Passive Income $5K/month</li>
+                            <li>- Investment Portfolio $100K</li>
+                            <li>- Net Worth $1 Million</li>
+                            <li>- 5,000 Real Estate Units</li>
+                            <li>- Build Family Home</li>
+                            <li>- And more...</li>
+                          </ul>
+                        </div>
+
+                        {alreadyImported && (
+                          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 flex items-start gap-2">
+                            <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-amber-700 dark:text-amber-300">
+                              It looks like you've already imported goals. Importing again will skip duplicates.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={() => setShowImportModal(false)}
+                      className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleImportPersonalGoals}
+                      className="flex-1 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <Download size={18} />
+                      Import Goals
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
