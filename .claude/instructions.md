@@ -43,6 +43,23 @@ Relevant rules: [list numbers]
 - **Storage**: IndexedDB for offline, Supabase for cloud sync
 - **Critical flows**: Backup/restore via download/upload, cloud sync
 - **Security**: Financial data - treat as highly sensitive
+- **Efficiency**: platform loading and page loading must have maximum possible optimization available today - treat as highly sensitive
+
+## DEPLOYMENT (MANDATORY)
+
+**Netlify Production Site**: steady-blini-ec1c85.netlify.app
+
+**Git Deployment Process** (MUST follow exactly):
+1. Commit to `main` branch first
+2. Checkout `life-goals-beta` branch: `git checkout life-goals-beta`
+3. Merge main: `git merge main --no-edit`
+4. Push to `koredius` remote: `git push koredius life-goals-beta`
+
+**NEVER** push only to `origin` or only to `main` when deploying - Netlify deploys from:
+- **Remote**: `koredius` (https://github.com/Koredius/wealthpulse-beta.git)
+- **Branch**: `life-goals-beta`
+
+After pushing, verify deploy started at: https://app.netlify.com/sites/steady-blini-ec1c85/deploys
 
 ## Red Flags (Never Do These)
 
@@ -53,6 +70,7 @@ Relevant rules: [list numbers]
 - Omit test strategy
 - Hardcode secrets or suggest insecure patterns
 - Propose "big bang" releases when incremental is possible
+- **Push to wrong remote/branch** - ALWAYS use `koredius` remote + `life-goals-beta` branch for Netlify deploys
 
 ## User Verification Commands
 
